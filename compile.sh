@@ -1,0 +1,1 @@
+g++ -O3 ./src/mwis.cpp -o mwis
