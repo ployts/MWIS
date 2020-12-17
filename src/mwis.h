@@ -17,11 +17,11 @@ unsigned long long first_reductions_cnt[10] = {0};
 float first_reductions_tims_cnt[10] = {0};
 weight_node first_reductions_weight_cnt[10] = {0};
 
-SET set_buffer0; //sets to be used temporarily
-SET set_buffer1; //sets to be used temporarily
-SET set_buffer2; //sets to be used temporarily
-SET set_buffer3; //sets to be used temporarily
-SET set_buffer4; //sets to be used temporarily
+SET set_buffer0(MAX_NUM_VERTICES); //sets to be used temporarily
+SET set_buffer1(MAX_NUM_VERTICES); //sets to be used temporarily
+SET set_buffer2(MAX_NUM_VERTICES); //sets to be used temporarily
+SET set_buffer3(MAX_NUM_VERTICES); //sets to be used temporarily
+SET set_buffer4(MAX_NUM_VERTICES); //sets to be used temporarily
 pair<size_t, size_t> init_edges[MAX_NUM_BUFFER];
 weight_node init_weights[MAX_NUM_VERTICES];
 weight_node cap_weight[MAX_NUM_VERTICES];
@@ -169,7 +169,6 @@ private:
 	void recover_ud(vertex &removed_vertex);
 	void recover(vertex removed_vertex);
 
-
 	void branch(weight_node local_weight);
 	weight_node apply_all_reductions();
 	void recover_reductions();
@@ -186,7 +185,7 @@ private:
 		&GRAPH::unconfined_reduction,
 		&GRAPH::critical_set_reduction,
 		&GRAPH::double_heavy_set_reduction
-		
+
 	};
 	bool is_closed(vertex u, vertex v);
 	void modify_weight(vertex v, weight_node obj_weight);
@@ -199,19 +198,17 @@ private:
 	weight_node neighborhood_reduction();
 	bool is_all_fast = false;
 
+	weight_node clique_cover_process(vertex v);
 	void merge_simultaneous_set(vector<vertex> &SimS);
-	void get_dis2_neighbors(vertex v,vector<vertex> & neighbors);
+	void get_dis2_neighbors(vertex v, vector<vertex> &neighbors);
 	bool get_unconfined_set_exactly(vertex &v, vector<vertex> &S_v);
 	weight_node unconfined_reduction();
-	weight_node clique_cover_reduction();
 	weight_node twin_reduction();
 	weight_node critical_set_reduction();
-	weight_node clique_cover_process(vertex v);
 	weight_node independent_reduction();
 	weight_node heavy_set_reduction();
 	weight_node double_heavy_set_reduction();
 	weight_node simultaneous_reduction();
-	void domination_process(vertex v);
 
 	void split_components(vector<vector<vertex>> &components);
 	weight_node branch_in_component(GRAPH *componnent_alg, vector<vertex> &component, weight_node lower_weight, bool called_flag);
@@ -225,8 +222,7 @@ private:
 		unconfined,
 		critical_set,
 		double_heavy_set,
-		independent,
-		clique_cover
+		independent
 	};
 
 	void update_solution(weight_node local_weight);

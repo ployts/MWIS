@@ -958,18 +958,32 @@ weight_node GRAPH::fold_vertices(vertex v)
 }
 weight_node GRAPH::degree2_process(vertex v)
 {
+	auto offset = clique_cover_process(v); //some genearal cases of degree 2
+	if (!is_available[v])
+		return offset;
+
 	vertex v1, v2, v3, v4, v5;
 	bool is_clique;
 	v3 = v;
 	v2 = list_buffer[list_buffer[v3].U].row;
 	v4 = list_buffer[list_buffer[v3].D].row;
-
-	auto offset = clique_cover_process(v);
-	if (!is_available[v])
-		return offset;
-
 	size_t cnt_flag = 0;
-	while (cnt_flag++ < 2)
+	offset = 0;
+
+	while (cnt_flag++ < 2) // a special case of degree 2, newly added; when combined with folding, it has a powerful performence
+	{
+		if (weights[v2] >= weights[v3] && weights[v3] > weights[v4])
+		{
+			offset = weights[v3] - weights[v4];
+			modify_weight(v2, weights[v2] - offset);
+			modify_weight(v3, weights[v4]);
+			break;
+		}
+		swap(v2, v4);
+	}
+
+	cnt_flag = 0;
+	while (cnt_flag++ < 2) //4-cycle containing 2 degree-2 vertices.
 	{
 		if (degree[v4] == 2 && weights[v2] >= weights[v3] && weights[v3] >= weights[v4])
 		{
@@ -982,72 +996,16 @@ weight_node GRAPH::degree2_process(vertex v)
 				}
 			}
 
-			if (weights[v5] > weights[v4] && !is_closed(v2, v5))
+			if (!is_closed(v2, v5))
 			{
 				continue;
 			}
-			return fold_vertices(v3);
+			return offset + fold_vertices(v3);
 		}
 		swap(v2, v4);
 	}
 
-	if (degree[v2] == 2 && degree[v4] == 2)
-	{
-		for (size_t i = list_buffer[v4].D; i != v4; i = list_buffer[i].D)
-		{
-			if (list_buffer[i].row != v3)
-			{
-				v5 = list_buffer[i].row;
-				break;
-			}
-		}
-		for (size_t i = list_buffer[v2].D; i != v2; i = list_buffer[i].D)
-		{
-			if (list_buffer[i].row != v3)
-			{
-				v1 = list_buffer[i].row;
-				break;
-			}
-		}
-
-		if (weights[v1] >= weights[v2] && weights[v2] >= weights[v3] && weights[v3] >= weights[v4] && weights[v4] >= weights[v5])
-		{
-			modified_stack.push(modified_node(v3, MS::REMOVED, weights[v3]));
-			remove(v3);
-			modified_stack.push(modified_node(v2, MS::REMOVED, weights[v2]));
-			remove(v2);
-			modified_stack.push(modified_node(v4, MS::REMOVED, weights[v4]));
-			remove(v4);
-
-			weights[cnt_n] = weights[v3];
-			insert_vertex(cnt_n);
-			modified_stack.push(modified_node(cnt_n, MS::ADDED, weights[cnt_n], list_buffer_cnt));
-
-			modify_weight(v1, weights[v1] + weights[v3] - weights[v2]);
-			modify_weight(v5, weights[v5] + weights[v3] - weights[v4]);
-
-			insert_edge(cnt_n, v1);
-			insert_edge(v1, cnt_n);
-			insert_edge(cnt_n, v5);
-			insert_edge(v5, cnt_n);
-
-#ifdef DEBUG
-			vector<vertex> neighbors;
-			neighbors.push_back(v1);
-			neighbors.push_back(v2);
-			neighbors.push_back(cnt_n);
-			neighbors.push_back(v4);
-			neighbors.push_back(v5);
-
-			local_solution.push(vertex_status(v, neighbors, cnt_n, VS::VS_P5_FOLDED));
-#endif
-			cnt_n++;
-			return weights[v2] + weights[v4] - weights[v3];
-		}
-	}
-
-	add_to_reduction_queue(v, reductions_type::clique_cover);
-	return 0;
+	return offset;
 }
 
 weight_node GRAPH::degree2_reduction()
@@ -1057,11 +1015,6 @@ weight_node GRAPH::degree2_reduction()
 
 	while (!reduction_queue[reductions_type::degree2].empty())
 	{
-		// if (old_n != local_n)
-		// {
-		// 	break;
-		// }
-
 		auto v = reduction_queue[reductions_type::degree2].front();
 		reduction_queue[reductions_type::degree2].pop();
 		is_in_reduction_queue[reductions_type::degree2][v] = false;
@@ -1361,42 +1314,6 @@ bool GRAPH::get_unconfined_set_exactly(vertex &v, vector<vertex> &S_v)
 
 	return is_unconfined;
 }
-
-void GRAPH::domination_process(vertex v)
-{
-	SET &neighbors_set = set_buffer0;
-	neighbors_set.clear();
-	for (size_t i = list_buffer[v].D; i != v; i = list_buffer[i].D)
-	{
-		neighbors_set.add(list_buffer[i].row);
-	}
-	bool is_dominated = false;
-	for (size_t i = list_buffer[v].D; i != v; i = list_buffer[i].D)
-	{
-		auto u = list_buffer[i].row;
-		if (degree[u] > degree[v] || weights[u] < weights[v])
-		{
-			break;
-		}
-		is_dominated = true;
-		for (size_t j = list_buffer[u].D; j != u; j = list_buffer[j].D)
-		{
-			if (!neighbors_set.get(list_buffer[j].row))
-			{
-				is_dominated = false;
-				break;
-			}
-		}
-
-		if (is_dominated)
-		{
-			exclude_vertex(v);
-			return;
-		}
-	}
-	add_to_reduction_queue(v, reductions_type::twin);
-}
-
 weight_node GRAPH::unconfined_reduction()
 {
 
@@ -1573,47 +1490,6 @@ weight_node GRAPH::clique_cover_process(vertex v)
 	}
 	add_to_reduction_queue(v, reductions_type::unconfined);
 	return 0;
-}
-
-weight_node GRAPH::clique_cover_reduction()
-{
-	weight_node reduction_offset = 0;
-	size_t old_n = local_n;
-
-	while (!reduction_queue[reductions_type::clique_cover].empty())
-	{
-		// if (old_n != local_n)
-		// {
-		// 	break;
-		// }
-		auto v = reduction_queue[reductions_type::clique_cover].front();
-		reduction_queue[reductions_type::clique_cover].pop();
-		is_in_reduction_queue[reductions_type::clique_cover][v] = false;
-		if (!is_available[v])
-		{
-			continue;
-		}
-
-		if (weights[v] >= all_neighbors_weight[v])
-		{
-			reduction_offset += include_vertex(v);
-			continue;
-		}
-
-		if (degree[v] < 2 || weights[v] == 0)
-		{
-			reduction_offset += degree01_process(v);
-			continue;
-		}
-
-		if (degree[v] > MAX_SMALL_GRAPH_SIZE)
-		{
-			reduction_offset += clique_cover_process(v);
-			continue;
-		}
-		add_to_reduction_queue(v, reductions_type::independent);
-	}
-	return reduction_offset;
 }
 
 weight_node GRAPH::twin_reduction()
@@ -2099,8 +1975,6 @@ weight_node GRAPH::double_heavy_set_reduction()
 				}
 			}
 		}
-
-		add_to_reduction_queue(v, reductions_type::clique_cover);
 	}
 
 	return reduction_offset;
@@ -2566,7 +2440,7 @@ void GRAPH::reduce()
 	reduction_offset_all = local_weight;
 
 	cout << reduction_time.count() << " " << local_n << " " << reduction_offset_all << endl;
-	
+
 	is_weight = local_weight;
 }
 
@@ -2609,7 +2483,7 @@ void GRAPH::output_reduced_graph(string filepath)
 		output << "e " << init_edges[i].first << " " << init_edges[i].second << endl;
 	}
 	output << "%" << total_weight << endl;
-	cout<<vertices.size() << " "<<cnt_m<<" "<<total_weight<<endl;
+	cout << vertices.size() << " " << cnt_m << " " << total_weight << endl;
 	output.close();
 }
 

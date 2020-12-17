@@ -1,18 +1,6 @@
 #pragma once
-#include <algorithm>
-#include <bitset>
-#include <cstdio>
-#include <cstring>
-#include <ctime>
-#include <fstream>
-#include <iostream>
-#include <queue>
-#include <sstream>
-#include <stack>
-#include <string>
-#include <vector>
-#include <cmath>
-#include <chrono>
+#include<bits/stdc++.h>
+#include<boost/dynamic_bitset.hpp>
 
 using std::cout;
 using std::vector;
@@ -28,6 +16,7 @@ using std::swap;
 using std::ofstream;
 using std::ifstream;
 using std::stringstream;
+using boost::dynamic_bitset;
 
 #define size_t unsigned int
 #define vertex unsigned int

@@ -1,8 +1,9 @@
 #pragma once
 #include "definitions.h"
 
-struct ISAP
+class ISAP
 {
+public:
 	const int inf = 1 << 28;
 	int n, m, cnt, s, t;
 	int *head, *pnt, *nxt, *flow, *pre, *d, *iter, *gap;
@@ -32,18 +33,6 @@ struct ISAP
 		delete[] gap;
 		delete[] vis;
 	}
-
-	void addedge(int u, int v, int f)
-	{
-		pnt[cnt] = v;
-		nxt[cnt] = head[u];
-		flow[cnt] = f;
-		head[u] = cnt++;
-		pnt[cnt] = u;
-		nxt[cnt] = head[v];
-		flow[cnt] = 0;
-		head[v] = cnt++;
-	}
 	void init(int n_)
 	{
 		n = n_;
@@ -57,6 +46,18 @@ struct ISAP
 		s = 0;
 		t = n - 1;
 	}
+	void addedge(int u, int v, int f)
+	{
+		pnt[cnt] = v;
+		nxt[cnt] = head[u];
+		flow[cnt] = f;
+		head[u] = cnt++;
+		pnt[cnt] = u;
+		nxt[cnt] = head[v];
+		flow[cnt] = 0;
+		head[v] = cnt++;
+	}
+	
 	void spfa()
 	{
 		queue<int> q;
@@ -88,6 +89,7 @@ struct ISAP
 		}
 		return f;
 	}
+
 	int Max_flow()
 	{
 		int fl = 0;
