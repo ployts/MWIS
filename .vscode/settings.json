@@ -21,6 +21,8 @@
         "functional": "cpp",
         "regex": "cpp",
         "tuple": "cpp",
-        "valarray": "cpp"
-    }
+        "valarray": "cpp",
+        "iostream": "cpp"
+    },
+    "C_Cpp.dimInactiveRegions": true
 }

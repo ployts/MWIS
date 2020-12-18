@@ -7,8 +7,6 @@
 float all_reduction_cost = 0;
 const float TIME_LIMIT = 1000.0;
 
-//#define DEBUG
-
 unsigned long long reductions_cnt[10] = {0};
 float reductions_tims_cnt[10] = {0};
 weight_node reductions_weight_cnt[10] = {0};
@@ -17,17 +15,19 @@ unsigned long long first_reductions_cnt[10] = {0};
 float first_reductions_tims_cnt[10] = {0};
 weight_node first_reductions_weight_cnt[10] = {0};
 
-SET set_buffer0(MAX_NUM_VERTICES); //sets to be used temporarily
-SET set_buffer1(MAX_NUM_VERTICES); //sets to be used temporarily
-SET set_buffer2(MAX_NUM_VERTICES); //sets to be used temporarily
-SET set_buffer3(MAX_NUM_VERTICES); //sets to be used temporarily
-SET set_buffer4(MAX_NUM_VERTICES); //sets to be used temporarily
-pair<size_t, size_t> init_edges[MAX_NUM_BUFFER];
-weight_node init_weights[MAX_NUM_VERTICES];
-weight_node cap_weight[MAX_NUM_VERTICES];
+SMALL_GRAPH small_graph;
+
+SET set_buffer0; //sets to be used temporarily
+SET set_buffer1; //sets to be used temporarily
+SET set_buffer2; //sets to be used temporarily
+SET set_buffer3; //sets to be used temporarily
+SET set_buffer4; //sets to be used temporarily
+pair<size_t, size_t> *init_edges;
+weight_node *init_weights;
+weight_node *cap_weight;
 std::chrono::_V2::system_clock::time_point start_time;
 
-size_t REMAP[MAX_NUM_VERTICES];
+size_t *REMAP;
 ISAP *flow_graph;
 
 struct list_node
@@ -61,10 +61,9 @@ private:
 	{
 		VS_EXCLUDED,
 		VS_INCLUDED,
-		VS_FOLDED,
 		VS_TRANSFERED,
-		VS_P5_FOLDED,
-		VS_TWIN_FOLDED,
+		VS_FOLDED,
+		VS_MODULE,
 		VS_TOKEN
 	};
 
@@ -74,18 +73,18 @@ private:
 		int vs;
 		vector<vertex> neighbors;
 
-		vertex_status(vertex v_, int vs_)
+		vertex_status(vertex v_, int vs_)//EXCLUDED INCLUDED
 		{
 			v = v_;
 			vs = vs_;
 		}
-		vertex_status(vertex v_, vector<vertex> &nei, int vs_)
+		vertex_status(vertex v_, vector<vertex> &nei, int vs_)//MODULE
 		{
 			v = v_;
 			vs = vs_;
 			neighbors = nei;
 		}
-		vertex_status(vertex v_, vector<vertex> &nei, vertex u_, int vs_)
+		vertex_status(vertex v_, vector<vertex> &nei, vertex u_, int vs_)//FOLDED TRANSFORMED
 		{
 			v = v_;
 			vs = vs_;
@@ -143,7 +142,7 @@ private:
 	size_t global_n, global_m;
 	size_t local_n;
 	size_t pre_n;
-	bitset<MAX_NUM_VERTICES> is_available;
+	dynamic_bitset<> is_available;
 
 	weight_node *weights;
 	weight_node *all_neighbors_weight;
@@ -152,10 +151,10 @@ private:
 	stack<modified_node> modified_stack;
 	stack<branching_node> branching_stack;
 
-	bitset<MAX_NUM_VERTICES> is_in_reduction_queue[10];
+	dynamic_bitset<> is_in_reduction_queue[10];//associate with reduction queue
 	queue<vertex> reduction_queue[10];
 #ifdef DEBUG
-	bitset<MAX_NUM_VERTICES> IS_STATUS;
+	dynamic_bitset<> IS_STATUS;
 #endif
 	bool is_clique_neighborhood;
 	bool is_independent_neighborhood;
@@ -185,7 +184,6 @@ private:
 		&GRAPH::unconfined_reduction,
 		&GRAPH::critical_set_reduction,
 		&GRAPH::double_heavy_set_reduction
-
 	};
 	bool is_closed(vertex u, vertex v);
 	void modify_weight(vertex v, weight_node obj_weight);
@@ -196,19 +194,16 @@ private:
 	weight_node degree2_process(vertex v);
 	weight_node degree2_reduction();
 	weight_node neighborhood_reduction();
-	bool is_all_fast = false;
 
-	weight_node clique_cover_process(vertex v);
+	weight_node general_degree2_cases(vertex v);
 	void merge_simultaneous_set(vector<vertex> &SimS);
 	void get_dis2_neighbors(vertex v, vector<vertex> &neighbors);
 	bool get_unconfined_set_exactly(vertex &v, vector<vertex> &S_v);
 	weight_node unconfined_reduction();
 	weight_node twin_reduction();
 	weight_node critical_set_reduction();
-	weight_node independent_reduction();
 	weight_node heavy_set_reduction();
 	weight_node double_heavy_set_reduction();
-	weight_node simultaneous_reduction();
 
 	void split_components(vector<vector<vertex>> &components);
 	weight_node branch_in_component(GRAPH *componnent_alg, vector<vertex> &component, weight_node lower_weight, bool called_flag);
@@ -252,14 +247,11 @@ public:
 	void reduce();
 	void output_reduced_graph(string filepath);
 #ifdef DEBUG
-	weight_node check_ans();
-	bitset<MAX_NUM_VERTICES> export_best_is();
+	dynamic_bitset<> export_best_is();
 #endif
 };
 
 GRAPH *GRAPH_BUFFER;
-
-SMALL_GRAPH small_graph;
 
 void read_graph(char *filepath, size_t &n, size_t &m);
 void init_buffers(size_t n, size_t m);

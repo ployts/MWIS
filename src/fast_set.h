@@ -15,6 +15,9 @@ public:
         buffer = new size_t[sz];
         buffer_size = sz;
     }
+    SET(){
+        
+    }
     void clear()
     {
         valid_flag++;

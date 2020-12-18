@@ -9,6 +9,12 @@ void GRAPH::build(size_t n, size_t m, pair<vertex, vertex> edges[], weight_node 
 	global_m = m;
 	max_n = 2 * n;
 	local_n = n;
+	is_available.resize(max_n, false);
+	for (auto i = 0; i < 10; i++)
+		is_in_reduction_queue[i].resize(max_n, false);
+#ifdef DEBUG
+	IS_STATUS.resize(max_n, false);
+#endif
 
 	for (size_t i = 1; i <= global_n; i++)
 	{
@@ -52,6 +58,13 @@ void GRAPH::build(size_t n, size_t m)
 	global_m = m;
 	max_n = 2 * n;
 	local_n = n;
+
+	is_available.resize(max_n, false);
+	for (auto i = 0; i < 10; i++)
+		is_in_reduction_queue[i].resize(max_n, false);
+#ifdef DEBUG
+	IS_STATUS.resize(max_n, false);
+#endif
 
 	for (size_t i = 1; i <= global_n; i++)
 	{
@@ -201,15 +214,13 @@ void GRAPH::run_branch(weight_node lower_weight)
 {
 	weight_node local_weight = 0;
 
-#ifdef DEBUG
+	// is_weight = max(lower_weight - 1, 0);
+
 	is_weight = 0;
-#else
-	is_weight = max(lower_weight, 0);
-#endif
+
 	pre_n = local_n;
-	size_t all_cnt = 0;
 	size_t old_local_weight;
-	is_all_fast = false;
+
 	if (!is_called_from_split_direct)
 	{
 		while (true)
@@ -234,13 +245,9 @@ void GRAPH::run_branch(weight_node lower_weight)
 		}
 	}
 
-	is_all_fast = false;
 	branch(local_weight);
-	// while (all_cnt--)
-	// {
-	// 	recover_reductions();
-	// }
 }
+
 void GRAPH::branch(weight_node local_weight)
 {
 	reduction_time = std::chrono::system_clock::now() - start_time;
@@ -249,7 +256,7 @@ void GRAPH::branch(weight_node local_weight)
 
 	if (is_fisrt_runed)
 	{
-		cout << reduction_time.count() << " " << local_n << " " << reduction_offset_all << endl;
+		cout << reduction_time.count() << " " << local_n << " " << local_weight << endl;
 	}
 
 	update_solution(local_weight);
@@ -266,14 +273,8 @@ void GRAPH::branch(weight_node local_weight)
 		vector<vector<vertex>> components;
 		split_components(components);
 
-		// if (is_fisrt_runed)
-		// {
-		// 	cout << components.size() << endl;
-		// }
-
 		if (components.size() > 1)
 		{
-			// cout << components.size() << endl;
 			vector<weight_node> component_upperbound(components.size(), 0);
 			vector<size_t> component_idx(components.size(), 0);
 			vector<double> avg_degree(components.size(), 0);
@@ -290,19 +291,12 @@ void GRAPH::branch(weight_node local_weight)
 				avg_degree[i] /= components[i].size();
 			}
 
+			//Here are some strategies to select connected components to run first.
 			//sort(component_idx.begin(), component_idx.end(), [&components, &component_upperbound](const size_t lhs, const size_t rhs) { return component_upperbound[lhs] < component_upperbound[rhs] || (component_upperbound[lhs] == component_upperbound[rhs] && components[lhs].size() < components[rhs].size()); });
 			//sort(component_idx.begin(), component_idx.end(), [&components, &component_upperbound](const size_t lhs, const size_t rhs) { return components[lhs].size() < components[rhs].size() || (components[lhs].size() == components[rhs].size() && component_upperbound[lhs] < component_upperbound[rhs]); });
 			//sort(component_idx.begin(), component_idx.end(), [&components, &component_upperbound](const size_t lhs, const size_t rhs) { return components[lhs].size() > components[rhs].size() || (components[lhs].size() == components[rhs].size() && component_upperbound[lhs] > component_upperbound[rhs]); });
 			sort(component_idx.begin(), component_idx.end(), [&](const size_t lhs, const size_t rhs) { return avg_degree[lhs] < avg_degree[rhs]; });
 
-			// component_idx.push_back(components.size());
-
-			// for (int i = components.size() - 1; i >= 0; i--)
-			// {
-			// 	component_upperbound[i] += component_upperbound[i + 1];
-			// }
-
-			//cout << components[component_idx[components.size() - 1]].size() << endl;
 			bool is_better = true;
 #ifdef DEBUG
 			IS_STATUS.reset();
@@ -311,41 +305,25 @@ void GRAPH::branch(weight_node local_weight)
 
 			for (size_t i = 0; i < components.size(); i++)
 			{
-
 				if (local_weight + total_clique_cover_weight <= is_weight)
 				{
 					is_better = false;
 					break;
 				}
-				// if (is_fisrt_runed)
-				// {
-				// 	std::chrono::duration<float> cost_time = std::chrono::system_clock::now() - start_time;
-				// 	cout << components[component_idx[i]].size() << " " << local_weight << " " << cost_time.count() << endl;
-				// 	remaining_n -= components[component_idx[i]].size();
-				// 	cout << remaining_n << " " << avg_degree[component_idx[i]] << endl;
-				// }
 
 				component_alg->reset(list_buffer + list_buffer_cnt, weights + cnt_n, all_neighbors_weight + cnt_n, degree + cnt_n);
 				local_weight += branch_in_component(component_alg, components[component_idx[i]], is_weight - (local_weight + total_clique_cover_weight - component_upperbound[component_idx[i]]), true);
 				total_clique_cover_weight -= component_upperbound[component_idx[i]];
 			}
-			modified_stack.push(modified_node(0, MS::TOKEN, 0));
-#ifdef DEBUG
-			local_solution.push(vertex_status(0, VS::VS_TOKEN));
-#endif
 
 			if (!is_better)
 			{
-				recover_reductions();
 				return;
 			}
 			if (local_weight > is_weight)
 			{
 				update_solution(local_weight);
-
 #ifdef DEBUG
-				best_solution = local_solution;
-
 				for (auto component : components)
 				{
 					for (vertex vc : component)
@@ -354,74 +332,27 @@ void GRAPH::branch(weight_node local_weight)
 						{
 							best_solution.push(vertex_status(vc, VS::VS_INCLUDED));
 						}
-						else
-						{
-
-							best_solution.push(vertex_status(vc, VS::VS_EXCLUDED));
-						}
 					}
 				}
 #endif
 			}
-			recover_reductions();
 			return;
 		}
+
+		//To be added
+		// else if (local_n <= pre_n / 2)
+		// {
+		// 	component_alg->reset(list_buffer + list_buffer_cnt, weights + cnt_n, all_neighbors_weight + cnt_n, degree + cnt_n);
+		// 	local_weight += branch_in_component(component_alg, components[0], is_weight - local_weight, true);
+		// 	update_solution(local_weight);
+		// 	return;
+		// }
 	}
 
-	if (is_running_time_out())
-	{
-		local_search(local_weight);
-		return;
-	}
-
-#ifndef DEBUG
-	if (local_n > LOCAL_SEARCH_LIMIT)
-		local_search(local_weight);
-#endif
-
-	if (is_fisrt_runed)
-	{
-		cout_best_is_now();
-	}
-
-	// if (true)
-	// {
-	// 	vector<vertex> vertices;
-	// 	get_available_vertices(vertices);
-	// 	for (auto v : vertices)
-	// 	{
-	// 		vector<vertex> S_v;
-	// 		if (!get_unconfined_set_exactly(v, S_v) && S_v.size() > 1)
-	// 		{
-	// 			exclude_vertex(v);
-
-	// 			insert_vertex(cnt_n);
-	// 			weights[cnt_n] = weights[v];
-	// 			modified_stack.push(modified_node(cnt_n, MS::ADDED, weights[cnt_n], list_buffer_cnt));
-	// 			//cout << S_v.size() << endl;
-	// 			SET &neighbors = set_buffer0;
-	// 			neighbors.clear();
-
-	// 			for (auto u : S_v)
-	// 			{
-	// 				For(nei, u)
-	// 				{
-	// 					if (!neighbors.get(list_buffer[nei].row))
-	// 					{
-	// 						add_to_reduction_queue(list_buffer[nei].row, reductions_type::neighborhood);
-	// 						insert_edge(cnt_n, list_buffer[nei].row);
-	// 						insert_edge(list_buffer[nei].row, cnt_n);
-	// 						neighbors.add(list_buffer[nei].row);
-	// 					}
-	// 				}
-	// 			}
-
-	// 			cnt_n++;
-	// 		}
-	// 	}
-
-	// 	modified_stack.push(modified_node(0, MS::TOKEN, 0));
-	// }
+	// if (local_n > LOCAL_SEARCH_LIMIT || is_running_time_out())
+	// 	local_search(local_weight);
+	// if (is_running_time_out())
+	// 	return;
 
 	vertex v = find_max_available_vertex();
 	vertex first_branch = v;
@@ -433,7 +364,6 @@ void GRAPH::branch(weight_node local_weight)
 			break;
 		}
 
-		//cout << local_n << endl;
 		if (v == 0)
 		{
 			update_solution(local_weight);
@@ -448,20 +378,13 @@ void GRAPH::branch(weight_node local_weight)
 			if (get_unconfined_set_exactly(v, S_v))
 			{
 				exclude_vertex(v);
-
-#ifdef DEBUG
-				local_solution.push(vertex_status(v, VS::VS_EXCLUDED));
-#endif
-
 				branching_stack.push(branching_node(v, local_weight, IS::EXCLUDED, pre_n));
 			}
 			else
 			{
 				branching_stack.push(branching_node(v, local_weight, IS::INCLUDED, pre_n));
-
-				for (size_t i = 0; i < S_v.size(); i++)
+				for (auto u : S_v)
 				{
-					auto u = S_v[i];
 					local_weight += include_vertex(u);
 				}
 			}
@@ -476,10 +399,6 @@ void GRAPH::branch(weight_node local_weight)
 			{
 				top_branch.status = IS::EXCLUDED;
 				exclude_vertex(v);
-
-#ifdef DEBUG
-				local_solution.push(vertex_status(v, VS::VS_EXCLUDED));
-#endif
 
 				branching_stack.push(top_branch);
 				pre_n = top_branch.pre_n;
@@ -497,7 +416,7 @@ void GRAPH::branch(weight_node local_weight)
 
 		local_weight += apply_all_reductions();
 
-		if (local_n >= SPLIT_LIMIT && 9 * pre_n >= 10 * local_n)
+		if (local_n >= SPLIT_LIMIT && 9 * pre_n >= 10 * local_n) //When the vertices decrease 10%, run global reductions and branch in components independently.
 		{
 			pre_n = local_n;
 			vector<vector<vertex>> components;
@@ -505,7 +424,6 @@ void GRAPH::branch(weight_node local_weight)
 
 			if (components.size() > 1)
 			{
-				//cout<<components.size()<<endl;
 				vector<weight_node> component_upperbound(components.size(), 0);
 				vector<size_t> component_idx(components.size(), 0);
 				weight_node total_clique_cover_weight = 0;
@@ -517,17 +435,11 @@ void GRAPH::branch(weight_node local_weight)
 				}
 
 				sort(component_idx.begin(), component_idx.end(), [&components, &component_upperbound](const size_t lhs, const size_t rhs) { return components[lhs].size() < components[rhs].size() || (components[lhs].size() == components[rhs].size() && component_upperbound[lhs] < component_upperbound[rhs]); });
-				// component_idx.push_back(components.size());
 
-				// for (int i = components.size() - 1; i >= 0; i--)
-				// {
-				// 	component_upperbound[i] += component_upperbound[i + 1];
-				// }
 				bool is_better = true;
 #ifdef DEBUG
 				IS_STATUS.reset();
 #endif
-
 				for (size_t i = 0; i < components.size(); i++)
 				{
 					if (local_weight + total_clique_cover_weight <= is_weight)
@@ -544,16 +456,15 @@ void GRAPH::branch(weight_node local_weight)
 #ifdef DEBUG
 				local_solution.push(vertex_status(0, VS::VS_TOKEN));
 #endif
-
 				if (!is_better)
 				{
 					recover_reductions();
 					continue;
 				}
+
 				if (local_weight > is_weight)
 				{
 					update_solution(local_weight);
-
 #ifdef DEBUG
 					best_solution = local_solution;
 
@@ -565,11 +476,6 @@ void GRAPH::branch(weight_node local_weight)
 							{
 								best_solution.push(vertex_status(vc, VS::VS_INCLUDED));
 							}
-							else
-							{
-
-								best_solution.push(vertex_status(vc, VS::VS_EXCLUDED));
-							}
 						}
 					}
 #endif
@@ -577,13 +483,14 @@ void GRAPH::branch(weight_node local_weight)
 				recover_reductions();
 				continue;
 			}
+			//To be added
 		}
 
 		if (9 * pre_n < 10 * local_n)
 		{
 			v = find_max_available_vertex();
 		}
-		else
+		else //We use the clique cover to prune
 		{
 			vector<vertex> clique_cover;
 			get_available_vertices(clique_cover);
@@ -807,7 +714,7 @@ bool GRAPH::is_closed(vertex u, vertex v)
 		swap(u, v);
 	}
 
-	for (size_t i = list_buffer[u].D; i != u; i = list_buffer[i].D)
+	For(i, u)
 	{
 		if (list_buffer[i].row == v)
 		{
@@ -820,9 +727,12 @@ bool GRAPH::is_closed(vertex u, vertex v)
 void GRAPH::modify_weight(vertex v, weight_node obj_weight)
 {
 	modified_stack.push(modified_node(v, MS::WEIGHT_MODIFIED, weights[v]));
-	for (size_t i = list_buffer[v].D; i != v; i = list_buffer[i].D)
+	add_to_reduction_queue(v, reductions_type::neighborhood);
+
+	For(i, v)
 	{
 		all_neighbors_weight[list_buffer[i].row] += obj_weight - weights[v];
+		add_to_reduction_queue(list_buffer[i].row, reductions_type::neighborhood);
 	}
 	weights[v] = obj_weight;
 }
@@ -835,11 +745,8 @@ weight_node GRAPH::include_vertex(vertex v) //include v into the independent set
 #endif
 	remove(v);
 
-	for (size_t i = list_buffer[v].D; i != v; i = list_buffer[i].D)
+	For(i, v)
 	{
-#ifdef DEBUG
-		local_solution.push(vertex_status(list_buffer[i].row, VS::VS_EXCLUDED));
-#endif
 		exclude_vertex(list_buffer[i].row);
 	}
 
@@ -854,10 +761,6 @@ inline void GRAPH::exclude_vertex(vertex v) //not exclude vertex, just remove
 
 weight_node GRAPH::degree01_process(vertex v)
 {
-	if (degree[v] == 0)
-	{
-		return include_vertex(v);
-	}
 	if (weights[v] == 0)
 	{
 		exclude_vertex(v);
@@ -888,27 +791,6 @@ weight_node GRAPH::degree01_process(vertex v)
 	return 0;
 }
 
-// weight_node degree01_reduction()
-// {
-// 	weight_node reduction_offset = 0;
-// 	while (!reduction_queue[reductions_type::degree01].empty())
-// 	{
-// 		auto v = reduction_queue[reductions_type::degree01].front();
-// 		reduction_queue[reductions_type::degree01].pop();
-// 		is_in_reduction_queue[reductions_type::degree01][v] = false;
-// 		if (!is_available[v])
-// 		{
-// 			continue;
-// 		}
-// 		if (degree[v] < 2 || weights[v] == 0)
-// 			reduction_offset += degree01_process(v);
-// 		else if (degree[v] == 2)
-// 			add_to_reduction_queue(v, reductions_type::degree2);
-// 		else
-// 			add_to_reduction_queue(v, reductions_type::unconfined);
-// 	}
-// 	return reduction_offset;
-// }
 weight_node GRAPH::fold_vertices(vertex v)
 {
 	exclude_vertex(v);
@@ -958,15 +840,15 @@ weight_node GRAPH::fold_vertices(vertex v)
 }
 weight_node GRAPH::degree2_process(vertex v)
 {
-	auto offset = clique_cover_process(v); //some genearal cases of degree 2
+	auto offset = general_degree2_cases(v); //some genearal cases of degree 2
 	if (!is_available[v])
 		return offset;
 
 	vertex v1, v2, v3, v4, v5;
-	bool is_clique;
 	v3 = v;
 	v2 = list_buffer[list_buffer[v3].U].row;
 	v4 = list_buffer[list_buffer[v3].D].row;
+
 	size_t cnt_flag = 0;
 	offset = 0;
 
@@ -1086,6 +968,9 @@ void GRAPH::merge_simultaneous_set(vector<vertex> &SimS)
 	insert_vertex(cnt_n);
 	weights[cnt_n] = total_weight;
 	modified_stack.push(modified_node(cnt_n, MS::ADDED, weights[cnt_n], list_buffer_cnt));
+#ifdef DEBUG
+	local_solution.push(vertex_status(cnt_n, SimS, VS::VS_MODULE));
+#endif
 
 	SET &neighbors = set_buffer0;
 	neighbors.clear();
@@ -1109,7 +994,7 @@ void GRAPH::merge_simultaneous_set(vector<vertex> &SimS)
 	cnt_n++;
 }
 
-bool GRAPH::get_unconfined_set_exactly(vertex &v, vector<vertex> &S_v)
+bool GRAPH::get_unconfined_set_exactly(vertex &v, vector<vertex> &S_v) // Check v is unconfined and get confined set S_v
 {
 	SET &is_visited = set_buffer3;
 	is_visited.clear();
@@ -1125,7 +1010,7 @@ bool GRAPH::get_unconfined_set_exactly(vertex &v, vector<vertex> &S_v)
 
 	bool is_unconfined = false;
 
-	for (size_t i = list_buffer[v].D; i != v; i = list_buffer[i].D)
+	For(i, v)
 	{
 		Q.push(list_buffer[i].row);
 		is_in_Q.add(list_buffer[i].row);
@@ -1140,7 +1025,7 @@ bool GRAPH::get_unconfined_set_exactly(vertex &v, vector<vertex> &S_v)
 		Q.pop();
 		is_in_Q.remove(u);
 
-		if (weights[u] < cap_weight[u] || degree[u] > 16 + set_S_v.size() + set_neighbos_S_v.size())
+		if (weights[u] < cap_weight[u] || degree[u] > 16 + set_S_v.size() + set_neighbos_S_v.size()) //Here we introduce a parameter 16 to reduce the search tree of unconfined set, it is not the best one
 		{
 			continue;
 		}
@@ -1151,7 +1036,6 @@ bool GRAPH::get_unconfined_set_exactly(vertex &v, vector<vertex> &S_v)
 			break;
 		}
 
-		//weight_node u_cap_S_v_weight = 0;
 		vector<vertex> uncovered_vertices;
 		weight_node max_neighbor_weight = 0;
 
@@ -1159,7 +1043,7 @@ bool GRAPH::get_unconfined_set_exactly(vertex &v, vector<vertex> &S_v)
 		weight_node upper_weight = all_neighbors_weight[u];
 		bool is_large = false;
 		bool is_possible_heavy = true;
-		for (size_t i = list_buffer[u].D; i != u; i = list_buffer[i].D)
+		For(i, u)
 		{
 			if (!set_S_v.get(list_buffer[i].row))
 			{
@@ -1299,17 +1183,6 @@ bool GRAPH::get_unconfined_set_exactly(vertex &v, vector<vertex> &S_v)
 				break;
 			}
 		}
-		// is_clique_neighborhood=false;
-		// is_independent_neighborhood=false;
-		// if (computing_upper_bound(uncovered_vertices, weights[u] - cap_weight[u]) + cap_weight[u] <= weights[u])
-		// {
-		// 	is_unconfined = true;
-		// 	break;
-		// }else if (is_independent_neighborhood){
-
-		// }else if(is_clique_neighborhood){
-
-		// }
 	}
 
 	return is_unconfined;
@@ -1320,23 +1193,11 @@ weight_node GRAPH::unconfined_reduction()
 	weight_node reduction_offset = 0;
 	size_t old_n = local_n;
 
-	// reduction_queue[8] = reduction_queue[reductions_type::unconfined];
-
-	// while (!reduction_queue[8].empty())
-	// {
-	// 	auto v = reduction_queue[8].front();
-	// 	reduction_queue[8].pop();
-
-	// 	For(u, v)
-	// 	{
-	// 		add_to_reduction_queue(list_buffer[u].row, reductions_type::unconfined);
-	// 	}
-	// }
-
 	while (!reduction_queue[reductions_type::unconfined].empty())
 	{
 		auto v = reduction_queue[reductions_type::unconfined].front();
 		reduction_queue[reductions_type::unconfined].pop();
+
 		if (!is_available[v] || !is_in_reduction_queue[reductions_type::unconfined][v])
 		{
 			is_in_reduction_queue[reductions_type::unconfined][v] = false;
@@ -1362,77 +1223,87 @@ weight_node GRAPH::unconfined_reduction()
 		{
 			exclude_vertex(v);
 
-			if (S_v.size() > 1)
+			for (auto u : S_v)
 			{
-				for (auto u : S_v)
-				{
-					add_to_reduction_queue(u, reductions_type::unconfined);
-				}
+				add_to_reduction_queue(u, reductions_type::unconfined);
 			}
 
 			continue;
 		}
 		else
 		{
-			if (S_v.size() > 1)
+			for (auto u : S_v)
 			{
-				vector<vertex> simu_set;
-				SET &is_checked = set_buffer0;
-				is_checked.clear();
-
-				simu_set.push_back(v);
-				is_checked.add(v);
-				for (auto u : S_v)
-				{
-					if (!is_checked.get(v))
-					{
-						vector<vertex> S_u;
-						get_unconfined_set_exactly(u, S_u);
-						if (S_u.size() == S_v.size())
-						{
-							simu_set.push_back(u);
-						}
-						else
-						{
-							for (auto w : S_u)
-								is_checked.add(w);
-						}
-						is_checked.add(u);
-					}
-					is_in_reduction_queue[reductions_type::unconfined][u] = false;
-				}
-
-				if (simu_set.size() > 1)
-				{
-					merge_simultaneous_set(simu_set);
-				}
+				is_in_reduction_queue[reductions_type::unconfined][u] = false;
 			}
+
+			//Here we can reduce further vertices by merging simultaneous set that is getting from confining set.
+
+			// 	if (S_v.size() > 1)
+			// 	{
+
+			// 		vector<vertex> simu_set;
+			// 		SET &is_checked = set_buffer0;
+			// 		is_checked.clear();
+
+			// 		simu_set.push_back(v);
+			// 		is_checked.add(v);
+			// 		for (auto u : S_v)
+			// 		{
+			// 			if (!is_checked.get(v))
+			// 			{
+			// 				vector<vertex> S_u;
+			// 				get_unconfined_set_exactly(u, S_u);
+			// 				if (S_u.size() == S_v.size())
+			// 				{
+			// 					simu_set.push_back(u);
+			// 				}
+			// 				else
+			// 				{
+			// 					for (auto w : S_u)
+			// 						is_checked.add(w);
+			// 				}
+			// 				is_checked.add(u);
+			// 			}
+			// 			is_in_reduction_queue[reductions_type::unconfined][u] = false;
+			// 		}
+
+			// 		if (simu_set.size() > 1)
+			// 		{
+			// 			merge_simultaneous_set(simu_set);
+
+			// 		}
+			// 	}
 		}
-		//add_to_reduction_queue(v, reductions_type::heavy_set);
 	}
 	return reduction_offset;
 }
 
-weight_node GRAPH::clique_cover_process(vertex v)
+weight_node GRAPH::general_degree2_cases(vertex v)
 {
 	vector<vertex> neighbors;
 	weight_node neighbor_weight = all_neighbors_weight[v];
-	weight_node min_neighbor_weight = 1 << 20;
-	for (size_t i = list_buffer[v].D; i != v; i = list_buffer[i].D)
+	weight_node min_neighbor_weight = INF;
+	For(i, v)
 	{
 		neighbors.push_back(list_buffer[i].row);
 		min_neighbor_weight = min(min_neighbor_weight, weights[list_buffer[i].row]);
 	}
 
 	is_clique_neighborhood = false;
-	is_independent_neighborhood = false;
-	weight_node clique_cover_weight = computing_upper_bound(neighbors, INF);
+	weight_node clique_cover_weight = weights[neighbors[0]] + weights[neighbors[1]];
+
+	if (is_closed(neighbors[0], neighbors[1]))
+	{
+		clique_cover_weight = max(weights[neighbors[0]], weights[neighbors[1]]);
+		is_clique_neighborhood = true;
+	}
 
 	if (weights[v] >= clique_cover_weight)
 	{
 		return include_vertex(v);
 	}
-	else if (is_independent_neighborhood && weights[v] >= neighbor_weight - min_neighbor_weight)
+	else if (!is_clique_neighborhood && weights[v] >= neighbor_weight - min_neighbor_weight)
 	{
 		return fold_vertices(v);
 	}
@@ -1467,7 +1338,7 @@ weight_node GRAPH::clique_cover_process(vertex v)
 		vector<vertex> unisolates_neighbors;
 #endif
 
-		for (size_t i = list_buffer[v].D; i != v; i = list_buffer[i].D)
+		For(i, v)
 		{
 			auto u = list_buffer[i].row;
 
@@ -1499,16 +1370,13 @@ weight_node GRAPH::twin_reduction()
 
 	while (!reduction_queue[reductions_type::twin].empty())
 	{
-		// if (old_n != local_n)
-		// {
-		// 	break;
-		// }
 		auto v = reduction_queue[reductions_type::twin].front();
 		reduction_queue[reductions_type::twin].pop();
 		is_in_reduction_queue[reductions_type::twin][v] = false;
 
 		if (!is_available[v])
 			continue;
+		add_to_reduction_queue(v, reductions_type::heavy_set);
 
 		if (weights[v] >= all_neighbors_weight[v])
 		{
@@ -1522,12 +1390,11 @@ weight_node GRAPH::twin_reduction()
 			continue;
 		}
 
-		if (degree[v]) //to be improved
+		if (degree[v])
 		{
 			vector<vertex> twins;
 			twins.push_back(v);
 			weight_node twins_weight = weights[v];
-			weight_node neighbors_weight = 0;
 
 			SET &is_checked_twin = set_buffer0;
 			SET &neighbors = set_buffer1;
@@ -1535,24 +1402,23 @@ weight_node GRAPH::twin_reduction()
 			neighbors.clear();
 			is_checked_twin.add(v);
 			vertex min_neighbor = list_buffer[list_buffer[v].D].row;
-			for (size_t i = list_buffer[v].D; i != v; i = list_buffer[i].D)
+			For(i, v)
 			{
 				is_checked_twin.add(list_buffer[i].row);
 				neighbors.add(list_buffer[i].row);
-				neighbors_weight += weights[list_buffer[i].row];
 
 				if (degree[min_neighbor] > degree[list_buffer[i].row])
 					min_neighbor = list_buffer[i].row;
 			}
 
-			for (size_t i = list_buffer[min_neighbor].D; i != min_neighbor; i = list_buffer[i].D)
+			For(i, min_neighbor)
 			{
 				auto u = list_buffer[i].row;
 				if (!is_checked_twin.get(u) && degree[u] == degree[v])
 				{
 					bool is_twin = true;
 
-					for (size_t l = list_buffer[u].D; l != u; l = list_buffer[l].D)
+					For(l, u)
 					{
 						if (!neighbors.get(list_buffer[l].row))
 						{
@@ -1571,11 +1437,10 @@ weight_node GRAPH::twin_reduction()
 
 			if (twins.size() == 1)
 			{
-				add_to_reduction_queue(v, reductions_type::heavy_set);
 				continue;
 			}
 
-			if (twins_weight >= neighbors_weight)
+			if (twins_weight >= all_neighbors_weight[v])
 			{
 				reduction_offset += twins_weight;
 
@@ -1586,12 +1451,9 @@ weight_node GRAPH::twin_reduction()
 #endif
 					exclude_vertex(u);
 				}
-				for (size_t i = list_buffer[v].D; i != v; i = list_buffer[i].D)
+				For(i, v)
 				{
 					auto u = list_buffer[i].row;
-#ifdef DEBUG
-					local_solution.push(vertex_status(u, VS::VS_EXCLUDED));
-#endif
 					exclude_vertex(u);
 				}
 				continue;
@@ -1600,21 +1462,15 @@ weight_node GRAPH::twin_reduction()
 			{
 				for (size_t i = 1; i < twins.size(); i++)
 				{
-					auto u = twins[i];
-					exclude_vertex(u);
+					exclude_vertex(twins[i]);
 				}
 				modify_weight(v, twins_weight);
-				add_to_reduction_queue(v, reductions_type::neighborhood);
-
 #ifdef DEBUG
-				local_solution.push(vertex_status(v, twins, VS::VS_TWIN_FOLDED));
+				local_solution.push(vertex_status(v, twins, VS::VS_MODULE));
 #endif
-
 				continue;
 			}
 		}
-
-		add_to_reduction_queue(v, reductions_type::heavy_set);
 	}
 	return reduction_offset;
 }
@@ -1625,12 +1481,6 @@ weight_node GRAPH::critical_set_reduction()
 	{
 		return 0;
 	}
-	// if (!is_fisrt_runed && pre_n != local_n)
-	// {
-	// 	return 0;
-	// }
-
-	//cout<<"flow start"<<endl;
 
 	weight_node reduction_offset = 0;
 	vector<vertex> vertices;
@@ -1700,7 +1550,6 @@ weight_node GRAPH::critical_set_reduction()
 		}
 	}
 
-	//cout<<"flow end"<<endl;
 	return reduction_offset;
 }
 
@@ -1715,6 +1564,8 @@ weight_node GRAPH::heavy_set_reduction()
 
 		if (!is_available[v])
 			continue;
+
+		add_to_reduction_queue(v, reductions_type::unconfined);
 
 		if (weights[v] >= all_neighbors_weight[v])
 		{
@@ -1735,7 +1586,7 @@ weight_node GRAPH::heavy_set_reduction()
 			is_mapped.clear();
 
 			size_t idx_cnt = 0;
-			for (size_t i = list_buffer[v].D; i != v; i = list_buffer[i].D)
+			For(i, v)
 			{
 				vertices.push_back(list_buffer[i].row);
 			}
@@ -1745,22 +1596,21 @@ weight_node GRAPH::heavy_set_reduction()
 				REMAP[vertices[idx_cnt]] = idx_cnt;
 				is_mapped.add(vertices[idx_cnt]);
 			}
-			weight_node min_weight = weights[vertices[0]];
+
 			small_graph.build(idx_cnt, weights[v]);
 			for (vertex u : vertices)
 			{
 				small_graph.assign_weight(REMAP[u], weights[u]);
-				for (size_t i = list_buffer[u].D; i != u; i = list_buffer[i].D)
+				For(i, u)
 				{
 					if (is_mapped.get(list_buffer[i].row))
 					{
 						small_graph.add_edge(REMAP[u], REMAP[list_buffer[i].row]);
 					}
 				}
-				min_weight = min(weights[u], min_weight);
 			}
 
-			if (small_graph.is_independent_neighborhood() && weights[v] >= all_neighbors_weight[v] - min_weight)
+			if (small_graph.is_independent_neighborhood() && weights[v] >= all_neighbors_weight[v] - weights[vertices[0]])
 			{
 				reduction_offset += fold_vertices(v);
 				continue;
@@ -1782,7 +1632,7 @@ weight_node GRAPH::heavy_set_reduction()
 						max_neighbor = u;
 					}
 				}
-				//neighbors.push_back(v);
+
 				v = max_isolated;
 
 				if (weights[v] >= weights[max_neighbor])
@@ -1797,7 +1647,7 @@ weight_node GRAPH::heavy_set_reduction()
 				vector<vertex> unisolates_neighbors;
 #endif
 
-				for (size_t i = list_buffer[v].D; i != v; i = list_buffer[i].D)
+				For(i, v)
 				{
 					auto u = list_buffer[i].row;
 
@@ -1825,8 +1675,6 @@ weight_node GRAPH::heavy_set_reduction()
 				continue;
 			}
 		}
-
-		add_to_reduction_queue(v, reductions_type::unconfined);
 	}
 
 	return reduction_offset;
@@ -1963,7 +1811,6 @@ weight_node GRAPH::double_heavy_set_reduction()
 
 				if (small_graph.is_heavy_set())
 				{
-					//cout << v << " " << w << endl;
 					reduction_offset += include_vertex(v);
 					reduction_offset += include_vertex(w);
 					is_succes = true;
@@ -1977,90 +1824,6 @@ weight_node GRAPH::double_heavy_set_reduction()
 		}
 	}
 
-	return reduction_offset;
-}
-
-weight_node GRAPH::independent_reduction()
-{
-	weight_node reduction_offset = 0;
-	while (!reduction_queue[reductions_type::independent].empty())
-	{
-		auto v = reduction_queue[reductions_type::independent].front();
-		reduction_queue[reductions_type::independent].pop();
-		is_in_reduction_queue[reductions_type::independent][v] = false;
-
-		if (!is_available[v])
-			continue;
-
-		// cout << "AAAA" << endl;
-		// cout<<local_n<<" "<<reduction_queue[reductions_type::independent].size();
-
-		if (weights[v] >= all_neighbors_weight[v])
-		{
-			reduction_offset += include_vertex(v);
-			continue;
-		}
-
-		if (degree[v] < 2 || weights[v] == 0)
-		{
-			reduction_offset += degree01_process(v);
-			continue;
-		}
-
-		if (degree[v] <= 20)
-		{
-			bool is_max_in_neighnors = true;
-			SET &neighbors_set = set_buffer0;
-			size_t map_cnt = 1;
-			neighbors_set.clear();
-			for (size_t i = list_buffer[v].D; i != v; i = list_buffer[i].D)
-			{
-				if (weights[v] <= weights[list_buffer[i].row])
-				{
-					is_max_in_neighnors = false;
-					break;
-				}
-				neighbors_set.add(list_buffer[i].row);
-				REMAP[list_buffer[i].row] = map_cnt++;
-			}
-			if (is_max_in_neighnors)
-			{
-				continue;
-			}
-
-			auto neighbor_alg = new GRAPH;
-			neighbor_alg->build(degree[v], degree[v] * 10);
-
-			map_cnt = 1;
-			for (size_t i = list_buffer[v].D; i != v; i = list_buffer[i].D)
-			{
-				neighbor_alg->assign_weight(map_cnt++, weights[list_buffer[i].row]);
-			}
-
-			for (size_t i = list_buffer[v].D; i != v; i = list_buffer[i].D)
-			{
-				auto u = list_buffer[i].row;
-				for (size_t j = list_buffer[u].D; j != u; j = list_buffer[j].D)
-				{
-					if (neighbors_set.get(list_buffer[j].row))
-					{
-						neighbor_alg->insert_edge(REMAP[u], REMAP[list_buffer[j].row]);
-					}
-				}
-			}
-
-			//cout<<"vertices: "<<degree[v]<<endl;
-			neighbor_alg->run_branch(0);
-
-			//cout<<"end: "<<degree[v]<<endl;
-			if (weights[v] >= neighbor_alg->MAX_IS())
-			{
-				cout << "useful" << endl;
-				reduction_offset += include_vertex(v);
-			}
-			delete neighbor_alg;
-		}
-	}
 	return reduction_offset;
 }
 
@@ -2136,14 +1899,13 @@ weight_node GRAPH::branch_in_component(GRAPH *componnent_alg, vector<vertex> &co
 	{
 		IS_STATUS[component[i]] = temp_ans[i + 1];
 	}
-
 #endif
 
 	return max_is;
 }
 
 #ifdef DEBUG
-bitset<MAX_NUM_VERTICES> GRAPH::export_best_is()
+dynamic_bitset<> GRAPH::export_best_is()
 {
 	local_solution = best_solution;
 	IS_STATUS.reset();
@@ -2157,11 +1919,7 @@ bitset<MAX_NUM_VERTICES> GRAPH::export_best_is()
 			continue;
 		}
 
-		if (top.vs == VS::VS_EXCLUDED)
-		{
-			IS_STATUS[top.v] = false;
-		}
-		else if (top.vs == VS::VS_INCLUDED)
+		if (top.vs == VS::VS_INCLUDED)
 		{
 			IS_STATUS[top.v] = true;
 		}
@@ -2178,10 +1936,6 @@ bitset<MAX_NUM_VERTICES> GRAPH::export_best_is()
 			else
 			{
 				IS_STATUS[top.v] = true;
-				for (auto u : top.neighbors)
-				{
-					IS_STATUS[u] = false;
-				}
 			}
 		}
 		else if (top.vs == VS::VS_TRANSFERED)
@@ -2203,33 +1957,7 @@ bitset<MAX_NUM_VERTICES> GRAPH::export_best_is()
 				IS_STATUS[top.v] = true;
 			}
 		}
-		else if (top.vs == VS::VS_P5_FOLDED)
-		{
-			if (IS_STATUS[top.neighbors[2]])
-			{
-				IS_STATUS[top.neighbors[0]] = IS_STATUS[top.neighbors[2]] = IS_STATUS[top.neighbors[4]] = false;
-				IS_STATUS[top.neighbors[1]] = IS_STATUS[top.neighbors[3]] = true;
-			}
-			else if (IS_STATUS[top.neighbors[0]])
-			{
-				if (IS_STATUS[top.neighbors[4]])
-				{
-					IS_STATUS[top.neighbors[2]] = true;
-					IS_STATUS[top.neighbors[1]] = IS_STATUS[top.neighbors[3]] = false;
-				}
-				else
-				{
-					IS_STATUS[top.neighbors[1]] = IS_STATUS[top.neighbors[2]] = false;
-					IS_STATUS[top.neighbors[3]] = true;
-				}
-			}
-			else if (IS_STATUS[top.neighbors[4]])
-			{
-				IS_STATUS[top.neighbors[3]] = IS_STATUS[top.neighbors[2]] = false;
-				IS_STATUS[top.neighbors[1]] = true;
-			}
-		}
-		else if (top.vs == VS::VS_TWIN_FOLDED)
+		else if (top.vs == VS::VS_MODULE)
 		{
 			for (auto u : top.neighbors)
 			{
@@ -2237,37 +1965,8 @@ bitset<MAX_NUM_VERTICES> GRAPH::export_best_is()
 			}
 		}
 	}
-	//check_ans();
+	best_solution = local_solution;
 	return IS_STATUS;
-}
-
-weight_node GRAPH::check_ans()
-{
-	weight_node ans = 0;
-	for (size_t i = 1; i <= global_n; i++)
-	{
-		if (IS_STATUS[i])
-		{
-			ans += weights[i];
-			continue;
-		}
-		bool is_maximal = false;
-
-		for (size_t j = list_buffer[i].D; j != i; j = list_buffer[j].D)
-		{
-			if (IS_STATUS[list_buffer[j].row])
-			{
-				is_maximal = true;
-				break;
-			}
-		}
-
-		if (!is_maximal)
-		{
-			cout << i << endl;
-		}
-	}
-	return ans;
 }
 #endif
 
@@ -2276,9 +1975,6 @@ inline void GRAPH::update_solution(weight_node local_weight)
 	if (local_weight > is_weight)
 	{
 		is_weight = local_weight;
-		//cout << is_weight << endl;
-		// if (is_fisrt_runed)
-		// 	cout_best_is_now();
 #ifdef DEBUG
 		best_solution = local_solution;
 #endif
@@ -2291,16 +1987,17 @@ inline void GRAPH::cout_best_is_now()
 	cout << cost_time.count() << " " << is_weight << endl;
 }
 
-void GRAPH::local_search(weight_node local_weight)
+void GRAPH::local_search(weight_node local_weight) // Here we take 3 greedy strategies to find a lower bound fast.
 {
 	SET &is_included2ls = set_buffer0;
 	is_included2ls.clear();
 	vector<vertex> vertices;
 	get_available_vertices(vertices);
+#ifdef DEBUG
+	stack<vertex_status> temp_solution = local_solution;
+#endif
 
 	sort(vertices.begin(), vertices.end(), [&](const vertex lhs, const vertex rhs) {
-		//return weights[lhs] > weights[rhs];
-		//return degree[lhs]<degree[rhs]||(degree[lhs]==degree[rhs]&&weights[lhs] > weights[rhs]);
 		return (double)weights[lhs] / degree[lhs] > (double)weights[rhs] / degree[rhs];
 	});
 	weight_node ls_weight = 0;
@@ -2323,17 +2020,27 @@ void GRAPH::local_search(weight_node local_weight)
 
 		ls_weight += weights[v];
 		is_included2ls.add(v);
+#ifdef DEBUG
+		temp_solution.push(vertex_status(v, VS::VS_INCLUDED));
+#endif
 	}
 
 	ls_lower_weight = local_weight + ls_weight;
-	is_weight = max(is_weight, ls_lower_weight);
+	if (ls_lower_weight > is_weight)
+	{
+		is_weight = ls_lower_weight;
+#ifdef DEBUG
+		best_solution = temp_solution;
+#endif
+	}
 
+#ifdef DEBUG
+	temp_solution = local_solution;
+#endif
 	is_included2ls.clear();
 
 	sort(vertices.begin(), vertices.end(), [&](const vertex lhs, const vertex rhs) {
-		//return weights[lhs] > weights[rhs];
 		return degree[lhs] < degree[rhs] || (degree[lhs] == degree[rhs] && weights[lhs] > weights[rhs]);
-		//return (double)weights[lhs]/degree[lhs] > (double)weights[rhs]/degree[rhs];
 	});
 	ls_weight = 0;
 	for (vertex v : vertices)
@@ -2355,17 +2062,27 @@ void GRAPH::local_search(weight_node local_weight)
 
 		ls_weight += weights[v];
 		is_included2ls.add(v);
+#ifdef DEBUG
+		temp_solution.push(vertex_status(v, VS::VS_INCLUDED));
+#endif
 	}
 
 	ls_lower_weight = local_weight + ls_weight;
-	is_weight = max(is_weight, ls_lower_weight);
+	if (ls_lower_weight > is_weight)
+	{
+		is_weight = ls_lower_weight;
+#ifdef DEBUG
+		best_solution = temp_solution;
+#endif
+	}
 
+#ifdef DEBUG
+	temp_solution = local_solution;
+#endif
 	is_included2ls.clear();
 
 	sort(vertices.begin(), vertices.end(), [&](const vertex lhs, const vertex rhs) {
 		return weights[lhs] > weights[rhs];
-		//return degree[lhs]<degree[rhs]||(degree[lhs]==degree[rhs]&&weights[lhs] > weights[rhs]);
-		//return (double)weights[lhs]/degree[lhs] > (double)weights[rhs]/degree[rhs];
 	});
 	ls_weight = 0;
 	for (vertex v : vertices)
@@ -2387,10 +2104,19 @@ void GRAPH::local_search(weight_node local_weight)
 
 		ls_weight += weights[v];
 		is_included2ls.add(v);
+#ifdef DEBUG
+		temp_solution.push(vertex_status(v, VS::VS_INCLUDED));
+#endif
 	}
 
 	ls_lower_weight = local_weight + ls_weight;
-	is_weight = max(is_weight, ls_lower_weight);
+	if (ls_lower_weight > is_weight)
+	{
+		is_weight = ls_lower_weight;
+#ifdef DEBUG
+		best_solution = temp_solution;
+#endif
+	}
 }
 
 bool GRAPH::is_running_time_out()
@@ -2521,6 +2247,10 @@ void read_graph(char *filepath, size_t &n, size_t &m)
 	size_t flag;
 	string line;
 	in >> n >> m >> flag;
+
+	init_edges = new pair<size_t, size_t>[2 * m];
+	init_weights = new weight_node[2 * n];
+
 	int cnt = 0;
 	weight_node total_weight = 0;
 	getline(in, line);
@@ -2556,6 +2286,13 @@ void init_buffers(size_t n, size_t m)
 	NEIGHBORS_WEIGHT_BUFFER = new weight_node[6 * n];
 	DEGREE_BUFFER = new size_t[6 * n];
 	flow_graph = new ISAP(4 * n, 4 * (n + m));
+	set_buffer0 = SET(2 * n);
+	set_buffer1 = SET(2 * n);
+	set_buffer2 = SET(2 * n);
+	set_buffer3 = SET(2 * n);
+	set_buffer4 = SET(2 * n);
+	cap_weight = new weight_node[2 * n];
+	REMAP = new size_t[2 * n];
 }
 void delete_buffers()
 {
@@ -2625,12 +2362,10 @@ int main(int argc, char *argv[])
 	if (argv[2][0] == 'r')
 	{
 		flag = true;
-		//cout << "REDUCE" << endl;
 	}
 
 	auto ALG = GRAPH_BUFFER;
 	ALG->reset(LARGE_BUFFER, WEIGHT_BUFFER, NEIGHBORS_WEIGHT_BUFFER, DEGREE_BUFFER);
-	//cout << n << " " << m << endl;
 	ALG->build(n, 2 * m, init_edges, init_weights);
 	ALG->is_fisrt_runed = true;
 
@@ -2642,12 +2377,10 @@ int main(int argc, char *argv[])
 
 	auto end_exact = std::chrono::system_clock::now();
 	std::chrono::duration<float> branch_reduce_time = end_exact - start_time;
-	//cout << "Reduction: " << GRAPH_BUFFER->reduction_time.count() << " " << GRAPH_BUFFER->remaining_vertices << " " << GRAPH_BUFFER->reduction_offset_all << endl;
 	cout << branch_reduce_time.count() << " " << GRAPH_BUFFER->MAX_IS() << endl;
 
 	if (flag)
 	{
-		//output_reduce(argv[3], n, m, branch_reduce_time);
 
 		for (int i = 0; i < 7; i++)
 		{
@@ -2667,21 +2400,18 @@ int main(int argc, char *argv[])
 		{
 			cout << reductions_tims_cnt[i] << " " << reductions_cnt[i] << " " << reductions_weight_cnt[i] << endl;
 		}
-
-		//output_data(argv[3], n, m, branch_reduce_time);
 	}
 
 #ifdef DEBUG
-	bitset<MAX_NUM_VERTICES> ans = ALG->export_best_is();
-	//ALG->check_ans();
+	auto ans = ALG->export_best_is();
 
 	bool is_independent = true;
-	for (auto i = 0; i < cnt; i++)
+	for (auto i = 0; i < m; i++)
 	{
-		if (ans[edges[i].first] && ans[edges[i].second])
+		if (ans[init_edges[i].first] && ans[init_edges[i].second])
 		{
 			is_independent = false;
-			cout << edges[i].first << " " << edges[i].second << endl;
+			cout << init_edges[i].first << " " << init_edges[i].second << endl;
 			break;
 		}
 	}
@@ -2690,17 +2420,15 @@ int main(int argc, char *argv[])
 	{
 		cout << "WRONG! NOT INDEPENDENT!" << endl;
 	}
-	int is_weight = 0;
+	weight_node is_weight = 0;
 	for (size_t i = 1; i <= n; i++)
 	{
 		if (ans[i])
-			is_weight += weights[i];
+			is_weight += init_weights[i];
 	}
 
 	cout << is_weight << endl;
 #endif
-	//cout << ALG->check_ans() << endl;
-
 	delete_buffers();
 	return 0;
 }

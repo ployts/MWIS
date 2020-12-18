@@ -1,5 +1,6 @@
 #pragma once
 #include<bits/stdc++.h>
+#include<boost/format.hpp>
 #include<boost/dynamic_bitset.hpp>
 
 using std::cout;
@@ -17,18 +18,17 @@ using std::ofstream;
 using std::ifstream;
 using std::stringstream;
 using boost::dynamic_bitset;
+using boost::format;
+
 
 #define size_t unsigned int
 #define vertex unsigned int
 #define weight_node int
 #define INF 0x3f3f3f3f
-#define FLOW_MAXN 1 << 22
-#define FLOW_MAXM 1 << 26
-#define MAX_NUM_VERTICES 5000000
-#define MAX_NUM_BUFFER 1 << 27
 #define SPLIT_LIMIT 100
 #define LOCAL_SEARCH_LIMIT 10
-#define MAX_SMALL_GRAPH_SIZE 1 << 3
+#define MAX_SMALL_GRAPH_SIZE 8
 #define MAX_SMALL_GRAPH_SIZE_H 8
-#define rep(i, a, b) for (int i = a; i < (b + 1); i++)
+#define rep(i, a, b) for (int i = a; i <= b; i++)
 #define For(v, u) for (vertex v = list_buffer[u].D; v != u; v = list_buffer[v].D)
+#define DEBUG
