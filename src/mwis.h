@@ -5,7 +5,7 @@
 #include "bit_graph.h"
 
 float all_reduction_cost = 0;
-const float TIME_LIMIT = 1000.0;
+float TIME_LIMIT = 0;
 
 unsigned long long reductions_cnt[10] = {0};
 float reductions_tims_cnt[10] = {0};
@@ -32,7 +32,7 @@ ISAP *flow_graph;
 
 struct list_node
 {
-	size_t L, R, U, D, row;
+	size_t L, R, U, D, label;
 };
 
 list_node *LARGE_BUFFER;
@@ -242,5 +242,3 @@ GRAPH *GRAPH_BUFFER;
 void read_graph(char *filepath, size_t &n, size_t &m);
 void init_buffers(size_t n, size_t m);
 void delete_buffers();
-void output_data(char *filepath, size_t n, size_t m, std::chrono::duration<float> &branch_reduce_time);
-void output_reduce(char *filepath, size_t n, size_t m, std::chrono::duration<float> &branch_reduce_time);

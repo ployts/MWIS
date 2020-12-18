@@ -18,27 +18,27 @@ void GRAPH::build(size_t n, size_t m, pair<vertex, vertex> edges[], weight_node 
 
 	for (size_t i = 1; i <= global_n; i++)
 	{
-		list_buffer[i].L = i - 1;
-		list_buffer[i].R = i + 1;
-		list_buffer[i].U = list_buffer[i].D = i;
-		list_buffer[i].row = 0;
+		LBL(i) = i - 1;
+		LBR(i) = i + 1;
+		LBU(i) = LBD(i) = i;
+		LBLB(i) = 0;
 
-		list_buffer[i + max_n].L = list_buffer[i + max_n].R = i + max_n;
-		list_buffer[i + max_n].U = i + max_n - 1;
-		list_buffer[i + max_n].D = i + max_n + 1;
-		list_buffer[i + max_n].row = i;
+		LBL(i + max_n) = LBR(i + max_n) = i + max_n;
+		LBU(i + max_n) = i + max_n - 1;
+		LBD(i + max_n) = i + max_n + 1;
+		LBLB(i + max_n) = i;
 		is_available[i] = true;
 		all_neighbors_weight[i] = 0;
 		weights[i] = weights_[i];
 		degree[i] = 0;
 	}
 
-	list_buffer[0].L = global_n;
-	list_buffer[0].R = 1;
-	list_buffer[0].U = max_n + global_n;
-	list_buffer[0].D = 1 + max_n;
+	LBL(0) = global_n;
+	LBR(0) = 1;
+	LBU(0) = max_n + global_n;
+	LBD(0) = 1 + max_n;
 
-	list_buffer[0].row = 0;
+	LBLB(0) = 0;
 	size_t head = 0;
 	recover_lr(head);
 	recover_ud(head);
@@ -68,26 +68,26 @@ void GRAPH::build(size_t n, size_t m)
 
 	for (size_t i = 1; i <= global_n; i++)
 	{
-		list_buffer[i].L = i - 1;
-		list_buffer[i].R = i + 1;
-		list_buffer[i].U = list_buffer[i].D = i;
-		list_buffer[i].row = 0;
+		LBL(i) = i - 1;
+		LBR(i) = i + 1;
+		LBU(i) = LBD(i) = i;
+		LBLB(i) = 0;
 
-		list_buffer[i + max_n].L = list_buffer[i + max_n].R = i + max_n;
-		list_buffer[i + max_n].U = i + max_n - 1;
-		list_buffer[i + max_n].D = i + max_n + 1;
-		list_buffer[i + max_n].row = i;
+		LBL(i + max_n) = LBR(i + max_n) = i + max_n;
+		LBU(i + max_n) = i + max_n - 1;
+		LBD(i + max_n) = i + max_n + 1;
+		LBLB(i + max_n) = i;
 		is_available[i] = true;
 		all_neighbors_weight[i] = 0;
 		degree[i] = 0;
 	}
 
-	list_buffer[0].L = global_n;
-	list_buffer[0].R = 1;
-	list_buffer[0].U = max_n + global_n;
-	list_buffer[0].D = 1 + max_n;
+	LBL(0) = global_n;
+	LBR(0) = 1;
+	LBU(0) = max_n + global_n;
+	LBD(0) = 1 + max_n;
 
-	list_buffer[0].row = 0;
+	LBLB(0) = 0;
 	size_t head = 0;
 	recover_lr(head);
 	recover_ud(head);
@@ -105,17 +105,17 @@ inline void GRAPH::insert_vertex(vertex vertex_idx)
 	local_n++;
 	degree[vertex_idx] = 0;
 	is_available[vertex_idx] = true;
-	list_buffer[vertex_idx].L = list_buffer[0].L;
-	list_buffer[vertex_idx].R = 0;
-	list_buffer[vertex_idx].U = list_buffer[vertex_idx].D = vertex_idx;
-	list_buffer[vertex_idx].row = 0;
+	LBL(vertex_idx) = LBL(0);
+	LBR(vertex_idx) = 0;
+	LBU(vertex_idx) = LBD(vertex_idx) = vertex_idx;
+	LBLB(vertex_idx) = 0;
 	recover_ud(vertex_idx);
 	recover_lr(vertex_idx);
 	vertex_idx += max_n;
-	list_buffer[vertex_idx].U = list_buffer[0].U;
-	list_buffer[vertex_idx].D = 0;
-	list_buffer[vertex_idx].L = list_buffer[vertex_idx].R = vertex_idx;
-	list_buffer[vertex_idx].row = vertex_idx - max_n;
+	LBU(vertex_idx) = LBU(0);
+	LBD(vertex_idx) = 0;
+	LBL(vertex_idx) = LBR(vertex_idx) = vertex_idx;
+	LBLB(vertex_idx) = vertex_idx - max_n;
 	recover_ud(vertex_idx);
 	recover_lr(vertex_idx);
 }
@@ -123,11 +123,11 @@ inline void GRAPH::insert_vertex(vertex vertex_idx)
 inline void GRAPH::insert_edge(vertex &edge_from, vertex &edge_to)
 {
 	all_neighbors_weight[edge_from] += weights[edge_to];
-	list_buffer[list_buffer_cnt].D = edge_from;
-	list_buffer[list_buffer_cnt].U = list_buffer[edge_from].U;
-	list_buffer[list_buffer_cnt].R = edge_to + max_n;
-	list_buffer[list_buffer_cnt].L = list_buffer[edge_to + max_n].L;
-	list_buffer[list_buffer_cnt].row = edge_to;
+	LBD(list_buffer_cnt) = edge_from;
+	LBU(list_buffer_cnt) = LBU(edge_from);
+	LBR(list_buffer_cnt) = edge_to + max_n;
+	LBL(list_buffer_cnt) = LBL(edge_to + max_n);
+	LBLB(list_buffer_cnt) = edge_to;
 	recover_ud(list_buffer_cnt);
 	recover_lr(list_buffer_cnt);
 	list_buffer_cnt++;
@@ -135,13 +135,13 @@ inline void GRAPH::insert_edge(vertex &edge_from, vertex &edge_to)
 }
 inline void GRAPH::remove_lr(vertex &removed_vertex)
 {
-	list_buffer[list_buffer[removed_vertex].R].L = list_buffer[removed_vertex].L;
-	list_buffer[list_buffer[removed_vertex].L].R = list_buffer[removed_vertex].R;
+	LBL(LBR(removed_vertex)) = LBL(removed_vertex);
+	LBR(LBL(removed_vertex)) = LBR(removed_vertex);
 }
 inline void GRAPH::remove_ud(vertex &removed_vertex)
 {
-	list_buffer[list_buffer[removed_vertex].U].D = list_buffer[removed_vertex].D;
-	list_buffer[list_buffer[removed_vertex].D].U = list_buffer[removed_vertex].U;
+	LBD(LBU(removed_vertex)) = LBD(removed_vertex);
+	LBU(LBD(removed_vertex)) = LBU(removed_vertex);
 }
 void GRAPH::remove(vertex removed_vertex)
 {
@@ -149,24 +149,24 @@ void GRAPH::remove(vertex removed_vertex)
 	local_n--;
 	size_t now = removed_vertex;
 	remove_lr(now);
-	now = list_buffer[now].D;
+	now = LBD(now);
 	while (now != removed_vertex)
 	{
 		remove_lr(now);
-		degree[list_buffer[now].row]--;
-		all_neighbors_weight[list_buffer[now].row] -= weights[removed_vertex];
-		add_to_reduction_queue(list_buffer[now].row, 0);
-		now = list_buffer[now].D;
+		degree[LBLB(now)]--;
+		all_neighbors_weight[LBLB(now)] -= weights[removed_vertex];
+		add_to_reduction_queue(LBLB(now), 0);
+		now = LBD(now);
 	}
 
 	removed_vertex += max_n;
 	now = removed_vertex;
 	remove_ud(now);
-	now = list_buffer[now].R;
+	now = LBR(now);
 	while (now != removed_vertex)
 	{
 		remove_ud(now);
-		now = list_buffer[now].R;
+		now = LBR(now);
 	}
 }
 void GRAPH::destroy_vertex(vertex vertex_idx)
@@ -175,13 +175,13 @@ void GRAPH::destroy_vertex(vertex vertex_idx)
 }
 inline void GRAPH::recover_lr(vertex &removed_vertex)
 {
-	list_buffer[list_buffer[removed_vertex].R].L = removed_vertex;
-	list_buffer[list_buffer[removed_vertex].L].R = removed_vertex;
+	LBL(LBR(removed_vertex)) = removed_vertex;
+	LBR(LBL(removed_vertex)) = removed_vertex;
 }
 inline void GRAPH::recover_ud(vertex &removed_vertex)
 {
-	list_buffer[list_buffer[removed_vertex].U].D = removed_vertex;
-	list_buffer[list_buffer[removed_vertex].D].U = removed_vertex;
+	LBD(LBU(removed_vertex)) = removed_vertex;
+	LBU(LBD(removed_vertex)) = removed_vertex;
 }
 void GRAPH::recover(vertex removed_vertex)
 {
@@ -190,23 +190,23 @@ void GRAPH::recover(vertex removed_vertex)
 	local_n++;
 	size_t now = removed_vertex;
 	recover_lr(now);
-	now = list_buffer[now].D;
+	now = LBD(now);
 	while (now != removed_vertex)
 	{
 		recover_lr(now);
-		degree[list_buffer[now].row]++;
-		all_neighbors_weight[list_buffer[now].row] += weights[removed_vertex];
-		//all_neighbors_weight[removed_vertex] += weights[list_buffer[now].row];
-		now = list_buffer[now].D;
+		degree[LBLB(now)]++;
+		all_neighbors_weight[LBLB(now)] += weights[removed_vertex];
+		//all_neighbors_weight[removed_vertex] += weights[LBLB(now)];
+		now = LBD(now);
 	}
 	removed_vertex += max_n;
 	now = removed_vertex;
 	recover_ud(now);
-	now = list_buffer[now].R;
+	now = LBR(now);
 	while (now != removed_vertex)
 	{
 		recover_ud(now);
-		now = list_buffer[now].R;
+		now = LBR(now);
 	}
 }
 
@@ -214,9 +214,7 @@ void GRAPH::run_branch(weight_node lower_weight)
 {
 	weight_node local_weight = 0;
 
-	// is_weight = max(lower_weight - 1, 0);
-
-	is_weight = 0;
+	is_weight = max(lower_weight - 1, 0);
 
 	pre_n = local_n;
 	size_t old_local_weight;
@@ -227,7 +225,7 @@ void GRAPH::run_branch(weight_node lower_weight)
 		{
 			old_local_weight = local_weight;
 
-			for (size_t i = list_buffer[0].R; i != 0; i = list_buffer[i].R)
+			for (size_t i = LBR(0); i != 0; i = LBR(i))
 			{
 				reduction_queue[0].push(i);
 			}
@@ -338,21 +336,31 @@ void GRAPH::branch(weight_node local_weight)
 			}
 			return;
 		}
-
-		//To be added
-		// else if (local_n <= pre_n / 2)
-		// {
-		// 	component_alg->reset(list_buffer + list_buffer_cnt, weights + cnt_n, all_neighbors_weight + cnt_n, degree + cnt_n);
-		// 	local_weight += branch_in_component(component_alg, components[0], is_weight - local_weight, true);
-		// 	update_solution(local_weight);
-		// 	return;
-		// }
+		else if (local_n <= global_n / 2)
+		{
+			component_alg->reset(list_buffer + list_buffer_cnt, weights + cnt_n, all_neighbors_weight + cnt_n, degree + cnt_n);
+			local_weight += branch_in_component(component_alg, components[0], is_weight - local_weight, true);
+			if (local_weight > is_weight)
+			{
+				update_solution(local_weight);
+#ifdef DEBUG
+				for (vertex vc : components[0])
+				{
+					if (IS_STATUS[vc])
+					{
+						best_solution.push(vertex_status(vc, VS::VS_INCLUDED, 0));
+					}
+				}
+#endif
+			}
+			return;
+		}
 	}
 
-	// if (local_n > LOCAL_SEARCH_LIMIT || is_running_time_out())
-	// 	local_search(local_weight);
-	// if (is_running_time_out())
-	// 	return;
+	if (local_n > LOCAL_SEARCH_LIMIT || is_running_time_out())
+		local_search(local_weight);
+	if (is_running_time_out())
+		return;
 
 	vertex v = find_max_available_vertex();
 	vertex first_branch = v;
@@ -483,7 +491,32 @@ void GRAPH::branch(weight_node local_weight)
 				recover_reductions();
 				continue;
 			}
-			//To be added
+			else if (local_n <= global_n / 2)
+			{
+				component_alg->reset(list_buffer + list_buffer_cnt, weights + cnt_n, all_neighbors_weight + cnt_n, degree + cnt_n);
+				local_weight += branch_in_component(component_alg, components[0], is_weight - local_weight, true);
+
+				modified_stack.push(modified_node(0, MS::TOKEN, 0));
+#ifdef DEBUG
+				local_solution.push(vertex_status(0, VS::VS_TOKEN, 0));
+#endif
+
+				if (local_weight > is_weight)
+				{
+#ifdef DEBUG
+					for (vertex vc : components[0])
+					{
+						if (IS_STATUS[vc])
+						{
+							local_solution.push(vertex_status(vc, VS::VS_INCLUDED, 0));
+						}
+					}
+#endif
+					update_solution(local_weight);
+				}
+				recover_reductions();
+				continue;
+			}
 		}
 
 		if (9 * pre_n < 10 * local_n)
@@ -522,14 +555,18 @@ void GRAPH::reset(list_node *list_buffer_start, weight_node *weight_buffer_start
 
 vertex GRAPH::find_max_available_vertex()
 {
-	vertex max_vertex = list_buffer[0].R;
+	vertex max_vertex = LBR(0);
 
-	for (size_t i = list_buffer[0].R; i != 0; i = list_buffer[i].R)
+	for (size_t i = LBR(0); i != 0; i = LBR(i))
 	{
 		if (degree[i] > degree[max_vertex] || (degree[i] == degree[max_vertex] && weights[i] > weights[max_vertex]))
 		{
 			max_vertex = i;
 		}
+		// if (all_neighbors_weight[i] - weights[i] > all_neighbors_weight[max_vertex] - weights[max_vertex])
+		// {
+		// 	max_vertex = i;
+		// }
 	}
 
 	return max_vertex;
@@ -589,9 +626,9 @@ void GRAPH::recover_reductions()
 		}
 		else if (top_mod.status == MS::WEIGHT_MODIFIED)
 		{
-			for (size_t i = list_buffer[top_mod.idx].D; i != top_mod.idx; i = list_buffer[i].D)
+			For(i, top_mod.idx)
 			{
-				all_neighbors_weight[list_buffer[i].row] += top_mod.weight - weights[top_mod.idx];
+				all_neighbors_weight[LBLB(i)] += top_mod.weight - weights[top_mod.idx];
 			}
 			weights[top_mod.idx] = top_mod.weight;
 			continue;
@@ -618,7 +655,7 @@ void GRAPH::recover_reductions()
 
 void GRAPH::get_available_vertices(vector<vertex> &vertex_order)
 {
-	for (size_t i = list_buffer[0].R; i != 0; i = list_buffer[i].R)
+	for (size_t i = LBR(0); i != 0; i = LBR(i))
 	{
 		vertex_order.push_back(i);
 	}
@@ -648,10 +685,10 @@ weight_node GRAPH::computing_upper_bound(vector<vertex> &vertex_order, weight_no
 		auto v = vertex_order[k];
 		neighbors_cnt.assign(clique_colors_cnt + 1, 0);
 
-		for (size_t i = list_buffer[v].D; i != v; i = list_buffer[i].D)
+		For(i, v)
 		{
-			if (is_colored.get(list_buffer[i].row))
-				neighbors_cnt[REMAP[list_buffer[i].row]]++;
+			if (is_colored.get(LBLB(i)))
+				neighbors_cnt[REMAP[LBLB(i)]]++;
 		}
 		is_alone = true;
 		for (size_t i = 1; i <= clique_colors_cnt; i++)
@@ -707,7 +744,7 @@ bool GRAPH::is_closed(vertex u, vertex v)
 
 	For(i, u)
 	{
-		if (list_buffer[i].row == v)
+		if (LBLB(i) == v)
 		{
 			return true;
 		}
@@ -722,8 +759,8 @@ void GRAPH::modify_weight(vertex v, weight_node obj_weight)
 
 	For(i, v)
 	{
-		all_neighbors_weight[list_buffer[i].row] += obj_weight - weights[v];
-		add_to_reduction_queue(list_buffer[i].row, reductions_type::neighborhood);
+		all_neighbors_weight[LBLB(i)] += obj_weight - weights[v];
+		add_to_reduction_queue(LBLB(i), reductions_type::neighborhood);
 	}
 	weights[v] = obj_weight;
 }
@@ -738,7 +775,7 @@ weight_node GRAPH::include_vertex(vertex v) //include v into the independent set
 
 	For(i, v)
 	{
-		exclude_vertex(list_buffer[i].row);
+		exclude_vertex(LBLB(i));
 	}
 
 	return weights[v];
@@ -758,7 +795,7 @@ weight_node GRAPH::degree01_process(vertex v)
 	}
 	else if (degree[v] == 1)
 	{
-		auto u = list_buffer[list_buffer[v].D].row;
+		auto u = LBLB(LBD(v));
 		if (weights[v] >= weights[u])
 		{
 			return include_vertex(v);
@@ -791,7 +828,7 @@ weight_node GRAPH::fold_vertices(vertex v)
 
 	For(i, v)
 	{
-		vertex u = list_buffer[i].row;
+		vertex u = LBLB(i);
 		neighbors.add(u);
 		exclude_vertex(u);
 
@@ -806,11 +843,11 @@ weight_node GRAPH::fold_vertices(vertex v)
 
 	For(i, v)
 	{
-		vertex j = list_buffer[i].row;
+		vertex j = LBLB(i);
 
 		For(k, j)
 		{
-			vertex u = list_buffer[k].row;
+			vertex u = LBLB(k);
 
 			if (!neighbors.get(u))
 			{
@@ -833,8 +870,8 @@ weight_node GRAPH::degree2_process(vertex v)
 
 	vertex v1, v2, v3, v4, v5;
 	v3 = v;
-	v2 = list_buffer[list_buffer[v3].U].row;
-	v4 = list_buffer[list_buffer[v3].D].row;
+	v2 = LBLB(LBU(v3));
+	v4 = LBLB(LBD(v3));
 
 	size_t cnt_flag = 0;
 	offset = 0;
@@ -862,11 +899,11 @@ weight_node GRAPH::degree2_process(vertex v)
 	{
 		if (degree[v4] == 2 && weights[v2] >= weights[v3] && weights[v3] >= weights[v4])
 		{
-			for (size_t i = list_buffer[v4].D; i != v4; i = list_buffer[i].D)
+			For(i, v4)
 			{
-				if (list_buffer[i].row != v3)
+				if (LBLB(i) != v3)
 				{
-					v5 = list_buffer[i].row;
+					v5 = LBLB(i);
 					break;
 				}
 			}
@@ -971,7 +1008,7 @@ void GRAPH::merge_simultaneous_set(vector<vertex> &SimS)
 #endif
 		For(k, v)
 		{
-			vertex u = list_buffer[k].row;
+			vertex u = LBLB(k);
 
 			if (!neighbors.get(u))
 			{
@@ -1004,11 +1041,11 @@ bool GRAPH::get_unconfined_set_exactly(vertex &v, vector<vertex> &S_v) // Check 
 
 	For(i, v)
 	{
-		Q.push(list_buffer[i].row);
-		is_in_Q.add(list_buffer[i].row);
-		set_neighbos_S_v.add(list_buffer[i].row);
-		is_visited.add(list_buffer[i].row);
-		cap_weight[list_buffer[i].row] = weights[v];
+		Q.push(LBLB(i));
+		is_in_Q.add(LBLB(i));
+		set_neighbos_S_v.add(LBLB(i));
+		is_visited.add(LBLB(i));
+		cap_weight[LBLB(i)] = weights[v];
 	}
 
 	while (!Q.empty())
@@ -1037,13 +1074,13 @@ bool GRAPH::get_unconfined_set_exactly(vertex &v, vector<vertex> &S_v) // Check 
 		bool is_possible_heavy = true;
 		For(i, u)
 		{
-			if (!set_S_v.get(list_buffer[i].row))
+			if (!set_S_v.get(LBLB(i)))
 			{
-				if (!set_neighbos_S_v.get(list_buffer[i].row))
+				if (!set_neighbos_S_v.get(LBLB(i)))
 				{
-					uncovered_vertices.push_back(list_buffer[i].row);
-					max_neighbor_weight = max(max_neighbor_weight, weights[list_buffer[i].row]);
-					all_weight += weights[list_buffer[i].row];
+					uncovered_vertices.push_back(LBLB(i));
+					max_neighbor_weight = max(max_neighbor_weight, weights[LBLB(i)]);
+					all_weight += weights[LBLB(i)];
 					if (uncovered_vertices.size() > 1 && max_neighbor_weight + cap_weight[u] > weights[u])
 					{
 						break;
@@ -1061,7 +1098,7 @@ bool GRAPH::get_unconfined_set_exactly(vertex &v, vector<vertex> &S_v) // Check 
 				}
 				else
 				{
-					upper_weight -= weights[list_buffer[i].row];
+					upper_weight -= weights[LBLB(i)];
 					if (upper_weight <= weights[u])
 					{
 						break;
@@ -1091,21 +1128,21 @@ bool GRAPH::get_unconfined_set_exactly(vertex &v, vector<vertex> &S_v) // Check 
 			S_v.push_back(uncovered_vertices[0]);
 			set_S_v.add(uncovered_vertices[0]);
 
-			for (size_t i = list_buffer[uncovered_vertices[0]].D; i != uncovered_vertices[0]; i = list_buffer[i].D)
+			For(i, uncovered_vertices[0])
 			{
-				set_neighbos_S_v.add(list_buffer[i].row);
-				if (!is_in_Q.get(list_buffer[i].row))
+				set_neighbos_S_v.add(LBLB(i));
+				if (!is_in_Q.get(LBLB(i)))
 				{
-					Q.push(list_buffer[i].row);
-					is_in_Q.add(list_buffer[i].row);
+					Q.push(LBLB(i));
+					is_in_Q.add(LBLB(i));
 				}
 
-				if (!is_visited.get(list_buffer[i].row))
+				if (!is_visited.get(LBLB(i)))
 				{
-					cap_weight[list_buffer[i].row] = 0;
-					is_visited.add(list_buffer[i].row);
+					cap_weight[LBLB(i)] = 0;
+					is_visited.add(LBLB(i));
 				}
-				cap_weight[list_buffer[i].row] = cap_weight[list_buffer[i].row] + weights[uncovered_vertices[0]];
+				cap_weight[LBLB(i)] = cap_weight[LBLB(i)] + weights[uncovered_vertices[0]];
 			}
 			continue;
 		}
@@ -1132,11 +1169,11 @@ bool GRAPH::get_unconfined_set_exactly(vertex &v, vector<vertex> &S_v) // Check 
 			for (vertex u : vertices)
 			{
 				small_graph.assign_weight(REMAP[u], weights[u]);
-				for (size_t i = list_buffer[u].D; i != u; i = list_buffer[i].D)
+				For(i, u)
 				{
-					if (is_mapped.get(list_buffer[i].row))
+					if (is_mapped.get(LBLB(i)))
 					{
-						small_graph.add_edge(REMAP[u], REMAP[list_buffer[i].row]);
+						small_graph.add_edge(REMAP[u], REMAP[LBLB(i)]);
 					}
 				}
 			}
@@ -1149,21 +1186,21 @@ bool GRAPH::get_unconfined_set_exactly(vertex &v, vector<vertex> &S_v) // Check 
 						S_v.push_back(uc);
 						set_S_v.add(uc);
 
-						for (size_t i = list_buffer[uc].D; i != uc; i = list_buffer[i].D)
+						For(i, uc)
 						{
-							set_neighbos_S_v.add(list_buffer[i].row);
-							if (!is_in_Q.get(list_buffer[i].row))
+							set_neighbos_S_v.add(LBLB(i));
+							if (!is_in_Q.get(LBLB(i)))
 							{
-								Q.push(list_buffer[i].row);
-								is_in_Q.add(list_buffer[i].row);
+								Q.push(LBLB(i));
+								is_in_Q.add(LBLB(i));
 							}
 
-							if (!is_visited.get(list_buffer[i].row))
+							if (!is_visited.get(LBLB(i)))
 							{
-								cap_weight[list_buffer[i].row] = 0;
-								is_visited.add(list_buffer[i].row);
+								cap_weight[LBLB(i)] = 0;
+								is_visited.add(LBLB(i));
 							}
-							cap_weight[list_buffer[i].row] = cap_weight[list_buffer[i].row] + weights[uc];
+							cap_weight[LBLB(i)] = cap_weight[LBLB(i)] + weights[uc];
 						}
 					}
 				}
@@ -1278,8 +1315,8 @@ weight_node GRAPH::general_degree2_cases(vertex v)
 	weight_node min_neighbor_weight = INF;
 	For(i, v)
 	{
-		neighbors.push_back(list_buffer[i].row);
-		min_neighbor_weight = min(min_neighbor_weight, weights[list_buffer[i].row]);
+		neighbors.push_back(LBLB(i));
+		min_neighbor_weight = min(min_neighbor_weight, weights[LBLB(i)]);
 	}
 
 	is_clique_neighborhood = false;
@@ -1328,7 +1365,7 @@ weight_node GRAPH::general_degree2_cases(vertex v)
 
 		For(i, v)
 		{
-			auto u = list_buffer[i].row;
+			auto u = LBLB(i);
 
 			if (weights[v] >= weights[u])
 			{
@@ -1389,26 +1426,26 @@ weight_node GRAPH::twin_reduction()
 			is_checked_twin.clear();
 			neighbors.clear();
 			is_checked_twin.add(v);
-			vertex min_neighbor = list_buffer[list_buffer[v].D].row;
+			vertex min_neighbor = LBLB(LBD(v));
 			For(i, v)
 			{
-				is_checked_twin.add(list_buffer[i].row);
-				neighbors.add(list_buffer[i].row);
+				is_checked_twin.add(LBLB(i));
+				neighbors.add(LBLB(i));
 
-				if (degree[min_neighbor] > degree[list_buffer[i].row])
-					min_neighbor = list_buffer[i].row;
+				if (degree[min_neighbor] > degree[LBLB(i)])
+					min_neighbor = LBLB(i);
 			}
 
 			For(i, min_neighbor)
 			{
-				auto u = list_buffer[i].row;
+				auto u = LBLB(i);
 				if (!is_checked_twin.get(u) && degree[u] == degree[v])
 				{
 					bool is_twin = true;
 
 					For(l, u)
 					{
-						if (!neighbors.get(list_buffer[l].row))
+						if (!neighbors.get(LBLB(l)))
 						{
 							is_twin = false;
 							break;
@@ -1441,7 +1478,7 @@ weight_node GRAPH::twin_reduction()
 				}
 				For(i, v)
 				{
-					auto u = list_buffer[i].row;
+					auto u = LBLB(i);
 					exclude_vertex(u);
 				}
 				continue;
@@ -1498,9 +1535,9 @@ weight_node GRAPH::critical_set_reduction()
 	for (size_t i = 1; i <= num; i++)
 	{
 		vertex cor = vertices[i - 1];
-		for (size_t j = list_buffer[cor].D; j != cor; j = list_buffer[j].D)
+		For(j, cor)
 		{
-			flow_graph->addedge(i, REMAP[list_buffer[j].row] + num, weights[cor]);
+			flow_graph->addedge(i, REMAP[LBLB(j)] + num, weights[cor]);
 		}
 
 		flow_graph->addedge(i + num, sink, weights[cor]);
@@ -1523,9 +1560,9 @@ weight_node GRAPH::critical_set_reduction()
 	{
 		bool is_isolated = true;
 
-		for (size_t i = list_buffer[v].D; i != v; i = list_buffer[i].D)
+		For(i, v)
 		{
-			if (cst_flag.get(list_buffer[i].row))
+			if (cst_flag.get(LBLB(i)))
 			{
 				is_isolated = false;
 				break;
@@ -1576,7 +1613,7 @@ weight_node GRAPH::heavy_set_reduction()
 			size_t idx_cnt = 0;
 			For(i, v)
 			{
-				vertices.push_back(list_buffer[i].row);
+				vertices.push_back(LBLB(i));
 			}
 			sort(vertices.begin(), vertices.end(), [&](const vertex &lhs, const vertex &rhs) { return weights[lhs] < weights[rhs]; });
 			for (; idx_cnt < vertices.size(); idx_cnt++)
@@ -1591,9 +1628,9 @@ weight_node GRAPH::heavy_set_reduction()
 				small_graph.assign_weight(REMAP[u], weights[u]);
 				For(i, u)
 				{
-					if (is_mapped.get(list_buffer[i].row))
+					if (is_mapped.get(LBLB(i)))
 					{
-						small_graph.add_edge(REMAP[u], REMAP[list_buffer[i].row]);
+						small_graph.add_edge(REMAP[u], REMAP[LBLB(i)]);
 					}
 				}
 			}
@@ -1633,7 +1670,7 @@ weight_node GRAPH::heavy_set_reduction()
 
 				For(i, v)
 				{
-					auto u = list_buffer[i].row;
+					auto u = LBLB(i);
 
 					if (weights[v] >= weights[u])
 					{
@@ -1673,20 +1710,20 @@ void GRAPH::get_dis2_neighbors(vertex v, vector<vertex> &neighbors)
 
 	For(u, v)
 	{
-		is_visited.add(list_buffer[u].row);
+		is_visited.add(LBLB(u));
 	}
 
 	For(u, v)
 	{
-		For(w, list_buffer[u].row)
+		For(w, LBLB(u))
 		{
-			if (!is_visited.get(list_buffer[w].row))
+			if (!is_visited.get(LBLB(w)))
 			{
-				if (degree[list_buffer[w].row] <= MAX_SMALL_GRAPH_SIZE_H)
+				if (degree[LBLB(w)] <= MAX_SMALL_GRAPH_SIZE_H)
 				{
-					neighbors.push_back(list_buffer[w].row);
+					neighbors.push_back(LBLB(w));
 				}
-				is_visited.add(list_buffer[w].row);
+				is_visited.add(LBLB(w));
 			}
 		}
 	}
@@ -1731,10 +1768,10 @@ weight_node GRAPH::double_heavy_set_reduction()
 			small_graph.heavy_v[0].reset();
 			size_t idx_cnt = 0;
 			small_graph.weight_v[0] = weights[v];
-			for (size_t i = list_buffer[v].D; i != v; i = list_buffer[i].D)
+			For(i, v)
 			{
-				neighbors.push_back(list_buffer[i].row);
-				neighbors_set.add(list_buffer[i].row);
+				neighbors.push_back(LBLB(i));
+				neighbors_set.add(LBLB(i));
 				small_graph.heavy_v[0][idx_cnt++] = true;
 			}
 
@@ -1749,11 +1786,11 @@ weight_node GRAPH::double_heavy_set_reduction()
 					continue;
 				}
 				auto vertices = neighbors;
-				for (size_t k = list_buffer[w].D; k != w; k = list_buffer[k].D)
+				For(k, w)
 				{
-					if (!neighbors_set.get(list_buffer[k].row))
+					if (!neighbors_set.get(LBLB(k)))
 					{
-						vertices.push_back(list_buffer[k].row);
+						vertices.push_back(LBLB(k));
 						if (vertices.size() > MAX_SMALL_GRAPH_SIZE_H)
 						{
 							break;
@@ -1776,19 +1813,19 @@ weight_node GRAPH::double_heavy_set_reduction()
 				}
 				small_graph.build(idx_cnt, 0);
 				small_graph.heavy_v[1].reset();
-				for (size_t l = list_buffer[w].D; l != w; l = list_buffer[l].D)
+				For(l, w)
 				{
-					small_graph.heavy_v[1][REMAP[list_buffer[l].row]] = true;
+					small_graph.heavy_v[1][REMAP[LBLB(l)]] = true;
 				}
 				small_graph.weight_v[1] = weights[w];
 				for (vertex ver : vertices)
 				{
 					small_graph.assign_weight(REMAP[ver], weights[ver]);
-					for (size_t i = list_buffer[ver].D; i != ver; i = list_buffer[i].D)
+					For(i, ver)
 					{
-						if (is_mapped.get(list_buffer[i].row))
+						if (is_mapped.get(LBLB(i)))
 						{
-							small_graph.add_edge(REMAP[ver], REMAP[list_buffer[i].row]);
+							small_graph.add_edge(REMAP[ver], REMAP[LBLB(i)]);
 						}
 					}
 				}
@@ -1821,7 +1858,7 @@ void GRAPH::split_components(vector<vector<vertex>> &components)
 	SET &is_visited = set_buffer0;
 	is_visited.clear();
 	size_t component_cnt = 0;
-	for (size_t i = list_buffer[0].R; i != 0; i = list_buffer[i].R)
+	for (size_t i = LBR(0); i != 0; i = LBR(i))
 	{
 		if (!is_visited.get(i))
 		{
@@ -1838,13 +1875,13 @@ void GRAPH::split_components(vector<vector<vertex>> &components)
 				auto top = Q.front();
 				Q.pop();
 
-				for (size_t j = list_buffer[top].D; j != top; j = list_buffer[j].D)
+				For(j, top)
 				{
-					if (is_visited.get(list_buffer[j].row))
+					if (is_visited.get(LBLB(j)))
 						continue;
-					Q.push(list_buffer[j].row);
-					now_component.push_back(list_buffer[j].row);
-					is_visited.add(list_buffer[j].row);
+					Q.push(LBLB(j));
+					now_component.push_back(LBLB(j));
+					is_visited.add(LBLB(j));
 				}
 			}
 		}
@@ -1866,9 +1903,9 @@ weight_node GRAPH::branch_in_component(GRAPH *componnent_alg, vector<vertex> &co
 	for (size_t i = 0; i < component.size(); i++)
 	{
 		auto v = component[i];
-		for (size_t j = list_buffer[v].D; j != v; j = list_buffer[j].D)
+		For(j, v)
 		{
-			componnent_alg->insert_edge(REMAP[v], REMAP[list_buffer[j].row]);
+			componnent_alg->insert_edge(REMAP[v], REMAP[LBLB(j)]);
 			cnt_m++;
 		}
 	}
@@ -1952,9 +1989,9 @@ void GRAPH::local_search(weight_node local_weight) // Here we take 3 greedy stra
 	{
 		bool is_uncovered = false;
 
-		for (size_t i = list_buffer[v].D; i != v; i = list_buffer[i].D)
+		For(i, v)
 		{
-			if (is_included2ls.get(list_buffer[i].row))
+			if (is_included2ls.get(LBLB(i)))
 			{
 				is_uncovered = true;
 				break;
@@ -1994,9 +2031,9 @@ void GRAPH::local_search(weight_node local_weight) // Here we take 3 greedy stra
 	{
 		bool is_uncovered = false;
 
-		for (size_t i = list_buffer[v].D; i != v; i = list_buffer[i].D)
+		For(i, v)
 		{
-			if (is_included2ls.get(list_buffer[i].row))
+			if (is_included2ls.get(LBLB(i)))
 			{
 				is_uncovered = true;
 				break;
@@ -2036,9 +2073,9 @@ void GRAPH::local_search(weight_node local_weight) // Here we take 3 greedy stra
 	{
 		bool is_uncovered = false;
 
-		for (size_t i = list_buffer[v].D; i != v; i = list_buffer[i].D)
+		For(i, v)
 		{
-			if (is_included2ls.get(list_buffer[i].row))
+			if (is_included2ls.get(LBLB(i)))
 			{
 				is_uncovered = true;
 				break;
@@ -2086,7 +2123,7 @@ void GRAPH::reduce()
 	{
 		old_local_weight = local_weight;
 
-		for (size_t i = list_buffer[0].R; i != 0; i = list_buffer[i].R)
+		for (size_t i = LBR(0); i != 0; i = LBR(i))
 		{
 			reduction_queue[0].push(i);
 		}
@@ -2140,12 +2177,12 @@ void GRAPH::output_reduced_graph(string filepath)
 	cnt_m = 0;
 	for (size_t i = 0; i < vertices.size(); i++)
 	{
-		for (size_t j = list_buffer[vertices[i]].D; j != vertices[i]; j = list_buffer[j].D)
+		For(j, vertices[i])
 		{
-			if (REMAP[list_buffer[j].row] > REMAP[vertices[i]])
+			if (REMAP[LBLB(j)] > REMAP[vertices[i]])
 			{
 				init_edges[cnt_m].first = REMAP[vertices[i]];
-				init_edges[cnt_m].second = REMAP[list_buffer[j].row];
+				init_edges[cnt_m].second = REMAP[LBLB(j)];
 				cnt_m++;
 			}
 		}
@@ -2177,11 +2214,11 @@ weight_node GRAPH::local_max_weight(vector<vertex> &vertices, weight_node lower_
 	for (vertex u : vertices)
 	{
 		small_graph.assign_weight(REMAP[u], weights[u]);
-		for (size_t i = list_buffer[u].D; i != u; i = list_buffer[i].D)
+		For(i, u)
 		{
-			if (is_mapped.get(list_buffer[i].row))
+			if (is_mapped.get(LBLB(i)))
 			{
-				small_graph.add_edge(REMAP[u], REMAP[list_buffer[i].row]);
+				small_graph.add_edge(REMAP[u], REMAP[LBLB(i)]);
 			}
 		}
 	}
@@ -2249,54 +2286,8 @@ void delete_buffers()
 	delete[] DEGREE_BUFFER;
 	delete[] GRAPH_BUFFER;
 	delete flow_graph;
-}
-
-void output_data(char *filepath, size_t n, size_t m, std::chrono::duration<float> &branch_reduce_time)
-{
-	ofstream out(filepath);
-	out << n << " " << m << endl;
-	out << GRAPH_BUFFER->reduction_time.count() << " " << GRAPH_BUFFER->remaining_vertices << " " << GRAPH_BUFFER->reduction_offset_all << " " << branch_reduce_time.count() << " " << GRAPH_BUFFER->MAX_IS() << endl;
-	for (int i = 0; i < 7; i++)
-	{
-		out << " " << reductions_cnt[i] << " " << reductions_tims_cnt[i] << " " << reductions_weight_cnt[i];
-	}
-	out << endl;
-	out.close();
-}
-
-void output_reduce(char *filepath, size_t n, size_t m, std::chrono::duration<float> &branch_reduce_time)
-{
-	ofstream out(filepath);
-	out << n << " " << m << endl;
-	out << "Reduction: " << GRAPH_BUFFER->reduction_time.count() << " " << GRAPH_BUFFER->remaining_vertices << " " << GRAPH_BUFFER->reduction_offset_all << endl;
-	unsigned long long first_all_cnt = 0;
-	float first_all_time = 0;
-	weight_node first_all_weight = 0;
-
-	unsigned long long total_all_cnt = 0;
-	float total_all_time = 0;
-	weight_node total_all_weight = 0;
-	for (int i = 0; i < 7; i++)
-	{
-		first_all_cnt += first_reductions_cnt[i];
-		first_all_time += first_reductions_tims_cnt[i];
-		first_all_weight += first_reductions_weight_cnt[i];
-		total_all_cnt += reductions_cnt[i];
-		total_all_time += reductions_tims_cnt[i];
-		total_all_weight += reductions_weight_cnt[i];
-		out << " " << first_reductions_cnt[i] << " " << first_reductions_tims_cnt[i] << " " << first_reductions_weight_cnt[i];
-	}
-
-	for (int i = 0; i < 7; i++)
-	{
-		out << " " << reductions_cnt[i] << " " << reductions_tims_cnt[i] << " " << reductions_weight_cnt[i];
-	}
-
-	out << endl;
-
-	out << "First ALL: " << first_all_cnt << " " << first_all_time << " " << first_all_weight << endl;
-	out << "Total ALL: " << total_all_cnt << " " << total_all_time << " " << total_all_weight << endl;
-	out.close();
+	delete[] cap_weight;
+	delete[] REMAP;
 }
 
 int main(int argc, char *argv[])
@@ -2304,9 +2295,10 @@ int main(int argc, char *argv[])
 	size_t n, m;
 	read_graph(argv[1], n, m);
 	init_buffers(n, m);
-
+	TIME_LIMIT = atof(argv[2]);
+	
 	bool flag = false;
-	if (argv[2][0] == 'r')
+	if (argv[3][0] == 'r')
 	{
 		flag = true;
 	}
@@ -2339,7 +2331,7 @@ int main(int argc, char *argv[])
 			cout << reductions_cnt[i] << " " << reductions_tims_cnt[i] << " " << reductions_weight_cnt[i] << endl;
 		}
 
-		ALG->output_reduced_graph(argv[3]);
+		ALG->output_reduced_graph(argv[4]);
 	}
 	else
 	{
@@ -2347,35 +2339,36 @@ int main(int argc, char *argv[])
 		{
 			cout << reductions_tims_cnt[i] << " " << reductions_cnt[i] << " " << reductions_weight_cnt[i] << endl;
 		}
-	}
 
 #ifdef DEBUG
-	auto ans = ALG->export_best_is();
+		auto ans = ALG->export_best_is(); // the maximum weighted independent set
 
-	bool is_independent = true;
-	for (auto i = 0; i < m; i++)
-	{
-		if (ans[init_edges[i].first] && ans[init_edges[i].second])
+		bool is_independent = true;
+		for (auto i = 0; i < m; i++)
 		{
-			is_independent = false;
-			cout << init_edges[i].first << " " << init_edges[i].second << endl;
-			break;
+			if (ans[init_edges[i].first] && ans[init_edges[i].second])
+			{
+				is_independent = false;
+				cout << init_edges[i].first << " " << init_edges[i].second << endl;
+				break;
+			}
 		}
-	}
 
-	if (!is_independent)
-	{
-		cout << "WRONG! NOT INDEPENDENT!" << endl;
-	}
-	weight_node is_weight = 0;
-	for (size_t i = 1; i <= n; i++)
-	{
-		if (ans[i])
-			is_weight += init_weights[i];
-	}
+		if (!is_independent)
+		{
+			cout << "WRONG! NOT INDEPENDENT!" << endl;
+		}
+		weight_node is_weight = 0;
+		for (size_t i = 1; i <= n; i++)
+		{
+			if (ans[i])
+				is_weight += init_weights[i];
+		}
 
-	cout << is_weight << endl;
+		cout << is_weight << endl;
 #endif
+	}
+
 	delete_buffers();
 	return 0;
 }
