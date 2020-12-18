@@ -1,4 +1,5 @@
-#pragma once
+#ifndef BIT_GRAPH_H
+#define BIT_GRAPH_H
 #include "definitions.h"
 
 
@@ -136,3 +137,4 @@ public:
 		return true;
 	}
 };
+#endif

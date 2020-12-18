@@ -1,4 +1,5 @@
-#pragma once
+#ifndef FAST_SET_H
+#define FAST_SET_H
 #include "definitions.h"
 
 class SET
@@ -52,3 +53,4 @@ public:
         return valid_size;
     }
 };
+#endif

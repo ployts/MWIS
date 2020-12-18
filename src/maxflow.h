@@ -1,4 +1,5 @@
-#pragma once
+#ifndef MAXFLOW_H
+#define MAXFLOW_H
 #include "definitions.h"
 
 class ISAP
@@ -131,3 +132,4 @@ public:
 		return fl;
 	}
 };
+#endif

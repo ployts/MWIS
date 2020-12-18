@@ -4,41 +4,10 @@
 #include "maxflow.h"
 #include "bit_graph.h"
 
-float all_reduction_cost = 0;
-float TIME_LIMIT = 0;
-
-unsigned long long reductions_cnt[10] = {0};
-float reductions_tims_cnt[10] = {0};
-weight_node reductions_weight_cnt[10] = {0};
-
-unsigned long long first_reductions_cnt[10] = {0};
-float first_reductions_tims_cnt[10] = {0};
-weight_node first_reductions_weight_cnt[10] = {0};
-
-SMALL_GRAPH small_graph;
-
-SET set_buffer0; //sets to be used temporarily
-SET set_buffer1; //sets to be used temporarily
-SET set_buffer2; //sets to be used temporarily
-SET set_buffer3; //sets to be used temporarily
-SET set_buffer4; //sets to be used temporarily
-pair<size_t, size_t> *init_edges;
-weight_node *init_weights;
-weight_node *cap_weight;
-std::chrono::_V2::system_clock::time_point start_time;
-
-size_t *REMAP;
-ISAP *flow_graph;
-
 struct list_node
 {
 	size_t L, R, U, D, label;
 };
-
-list_node *LARGE_BUFFER;
-weight_node *WEIGHT_BUFFER;
-weight_node *NEIGHBORS_WEIGHT_BUFFER;
-size_t *DEGREE_BUFFER;
 
 class GRAPH
 {
@@ -236,8 +205,6 @@ public:
 	dynamic_bitset<> export_best_is();
 #endif
 };
-
-GRAPH *GRAPH_BUFFER;
 
 void read_graph(char *filepath, size_t &n, size_t &m);
 void init_buffers(size_t n, size_t m);
