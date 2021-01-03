@@ -31,4 +31,3 @@ using boost::format;
 #define MAX_SMALL_GRAPH_SIZE_H 8
 #define rep(i, a, b) for (int i = a; i <= b; i++)
 #define For(v, u) for (vertex v = list_buffer[u].D; v != u; v = list_buffer[v].D)
-#define DEBUG

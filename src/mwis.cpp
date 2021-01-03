@@ -330,7 +330,7 @@ void GRAPH::branch(weight_node local_weight)
 					{
 						if (IS_STATUS[vc])
 						{
-							best_solution.push(vertex_status(vc, VS::VS_INCLUDED));
+							best_solution.push(vertex_status(vc, VS::VS_INCLUDED, 0));
 						}
 					}
 				}
@@ -454,7 +454,7 @@ void GRAPH::branch(weight_node local_weight)
 				}
 				modified_stack.push(modified_node(0, MS::TOKEN, 0));
 #ifdef DEBUG
-				local_solution.push(vertex_status(0, VS::VS_TOKEN));
+				local_solution.push(vertex_status(0, VS::VS_TOKEN, 0));
 #endif
 				if (!is_better)
 				{
@@ -474,7 +474,7 @@ void GRAPH::branch(weight_node local_weight)
 						{
 							if (IS_STATUS[vc])
 							{
-								best_solution.push(vertex_status(vc, VS::VS_INCLUDED));
+								best_solution.push(vertex_status(vc, VS::VS_INCLUDED, 0));
 							}
 						}
 					}
@@ -537,15 +537,6 @@ vertex GRAPH::find_max_available_vertex()
 
 weight_node GRAPH::apply_all_reductions()
 {
-
-	// if (branching_stack.size() == 0 || (local_n > 100 && 9 * pre_n >= 10 * local_n)) // && (branching_stack.size() % 3 != 0)
-	// {
-	// 	for (size_t i = list_buffer[0].R; i != 0; i = list_buffer[i].R)
-	// 	{
-	// 		add_to_reduction_queue(i, 0);
-	// 	}
-	// }
-
 	auto s_tttt = std::chrono::system_clock::now();
 
 	weight_node reduction_offset = 0;
@@ -578,7 +569,7 @@ weight_node GRAPH::apply_all_reductions()
 
 	modified_stack.push(modified_node(0, MS::TOKEN, 0));
 #ifdef DEBUG
-	local_solution.push(vertex_status(0, VS::VS_TOKEN));
+	local_solution.push(vertex_status(0, VS::VS_TOKEN, 0));
 #endif
 	return reduction_offset;
 }
@@ -741,7 +732,7 @@ weight_node GRAPH::include_vertex(vertex v) //include v into the independent set
 {
 	modified_stack.push(modified_node(v, MS::REMOVED, weights[v]));
 #ifdef DEBUG
-	local_solution.push(vertex_status(v, VS::VS_INCLUDED));
+	local_solution.push(vertex_status(v, VS::VS_INCLUDED, 0));
 #endif
 	remove(v);
 
@@ -764,9 +755,6 @@ weight_node GRAPH::degree01_process(vertex v)
 	if (weights[v] == 0)
 	{
 		exclude_vertex(v);
-#ifdef DEBUG
-		local_solution.push(vertex_status(v, VS::VS_EXCLUDED));
-#endif
 	}
 	else if (degree[v] == 1)
 	{
@@ -781,9 +769,8 @@ weight_node GRAPH::degree01_process(vertex v)
 			modify_weight(u, weights[u] - weights[v]);
 
 #ifdef DEBUG
-			vector<vertex> neighors;
-			neighors.push_back(u);
-			local_solution.push(vertex_status(v, neighors, VS::VS_TRANSFERED));
+			local_solution.push(vertex_status(v, VS::VS_NOTIF, u));
+			local_solution.push(vertex_status(v, VS::VS_INCLUDED, 0));
 #endif
 			return weights[v];
 		}
@@ -797,31 +784,31 @@ weight_node GRAPH::fold_vertices(vertex v)
 	SET &neighbors = set_buffer0;
 	neighbors.clear();
 	neighbors.add(v);
+
 #ifdef DEBUG
-	vector<vertex> nei;
+	local_solution.push(vertex_status(v, VS::VS_IFNOT, cnt_n));
 #endif
-	for (size_t i = list_buffer[v].D; i != v; i = list_buffer[i].D)
+
+	For(i, v)
 	{
 		vertex u = list_buffer[i].row;
 		neighbors.add(u);
 		exclude_vertex(u);
+
 #ifdef DEBUG
-		nei.push_back(u);
+		local_solution.push(vertex_status(u, VS::VS_IF, cnt_n));
 #endif
 	}
 
-#ifdef DEBUG
-	local_solution.push(vertex_status(v, nei, cnt_n, VS::VS_FOLDED));
-#endif
 	insert_vertex(cnt_n);
 	weights[cnt_n] = all_neighbors_weight[v] - weights[v];
 	modified_stack.push(modified_node(cnt_n, MS::ADDED, weights[cnt_n], list_buffer_cnt));
 
-	for (size_t i = list_buffer[v].D; i != v; i = list_buffer[i].D)
+	For(i, v)
 	{
 		vertex j = list_buffer[i].row;
 
-		for (size_t k = list_buffer[j].D; k != j; k = list_buffer[k].D)
+		For(k, j)
 		{
 			vertex u = list_buffer[k].row;
 
@@ -859,6 +846,12 @@ weight_node GRAPH::degree2_process(vertex v)
 			offset = weights[v3] - weights[v4];
 			modify_weight(v2, weights[v2] - offset);
 			modify_weight(v3, weights[v4]);
+#ifdef DEBUG
+			// exactly one of v2 and v3 is in the mwis, assume that v3 is in mwis by default, then v2->!v3 and v3->!v4
+			local_solution.push(vertex_status(v4, VS::VS_NOTIF, v3));
+			local_solution.push(vertex_status(v3, VS::VS_NOTIF, v2));
+			local_solution.push(vertex_status(v3, VS::VS_INCLUDED, 0));
+#endif
 			break;
 		}
 		swap(v2, v4);
@@ -968,16 +961,15 @@ void GRAPH::merge_simultaneous_set(vector<vertex> &SimS)
 	insert_vertex(cnt_n);
 	weights[cnt_n] = total_weight;
 	modified_stack.push(modified_node(cnt_n, MS::ADDED, weights[cnt_n], list_buffer_cnt));
-#ifdef DEBUG
-	local_solution.push(vertex_status(cnt_n, SimS, VS::VS_MODULE));
-#endif
-
 	SET &neighbors = set_buffer0;
 	neighbors.clear();
 
 	for (auto v : SimS)
 	{
-		for (size_t k = list_buffer[v].D; k != v; k = list_buffer[k].D)
+#ifdef DEBUG
+		local_solution.push(vertex_status(v, VS::VS_IF, cnt_n));
+#endif
+		For(k, v)
 		{
 			vertex u = list_buffer[k].row;
 
@@ -1324,7 +1316,7 @@ weight_node GRAPH::general_degree2_cases(vertex v)
 				max_neighbor = u;
 			}
 		}
-		//neighbors.push_back(v);
+
 		v = max_isolated;
 
 		if (weights[v] >= weights[max_neighbor])
@@ -1333,10 +1325,6 @@ weight_node GRAPH::general_degree2_cases(vertex v)
 		}
 
 		exclude_vertex(v);
-
-#ifdef DEBUG
-		vector<vertex> unisolates_neighbors;
-#endif
 
 		For(i, v)
 		{
@@ -1350,12 +1338,12 @@ weight_node GRAPH::general_degree2_cases(vertex v)
 			{
 				modify_weight(u, weights[u] - weights[v]);
 #ifdef DEBUG
-				unisolates_neighbors.push_back(u);
+				local_solution.push(vertex_status(v, VS::VS_NOTIF, u));
 #endif
 			}
 		}
 #ifdef DEBUG
-		local_solution.push(vertex_status(v, unisolates_neighbors, VS::VS_TRANSFERED));
+		local_solution.push(vertex_status(v, VS::VS_INCLUDED, 0));
 #endif
 		return weights[v];
 	}
@@ -1447,7 +1435,7 @@ weight_node GRAPH::twin_reduction()
 				for (auto u : twins)
 				{
 #ifdef DEBUG
-					local_solution.push(vertex_status(u, VS::VS_INCLUDED));
+					local_solution.push(vertex_status(u, VS::VS_INCLUDED, 0));
 #endif
 					exclude_vertex(u);
 				}
@@ -1463,11 +1451,11 @@ weight_node GRAPH::twin_reduction()
 				for (size_t i = 1; i < twins.size(); i++)
 				{
 					exclude_vertex(twins[i]);
+#ifdef DEBUG
+					local_solution.push(vertex_status(twins[i], VS::VS_IF, v));
+#endif
 				}
 				modify_weight(v, twins_weight);
-#ifdef DEBUG
-				local_solution.push(vertex_status(v, twins, VS::VS_MODULE));
-#endif
 				continue;
 			}
 		}
@@ -1643,10 +1631,6 @@ weight_node GRAPH::heavy_set_reduction()
 
 				exclude_vertex(v);
 
-#ifdef DEBUG
-				vector<vertex> unisolates_neighbors;
-#endif
-
 				For(i, v)
 				{
 					auto u = list_buffer[i].row;
@@ -1659,12 +1643,12 @@ weight_node GRAPH::heavy_set_reduction()
 					{
 						modify_weight(u, weights[u] - weights[v]);
 #ifdef DEBUG
-						unisolates_neighbors.push_back(u);
+						local_solution.push(vertex_status(v, VS::VS_NOTIF, u));
 #endif
 					}
 				}
 #ifdef DEBUG
-				local_solution.push(vertex_status(v, unisolates_neighbors, VS::VS_TRANSFERED));
+				local_solution.push(vertex_status(v, VS::VS_INCLUDED, 0));
 #endif
 				reduction_offset += weights[v];
 				continue;
@@ -1919,50 +1903,13 @@ dynamic_bitset<> GRAPH::export_best_is()
 			continue;
 		}
 
-		if (top.vs == VS::VS_INCLUDED)
+		if ((top.vs == VS::VS_INCLUDED) || (top.vs == VS::VS_IF && IS_STATUS[top.u]) || (top.vs == VS::VS_IFNOT && !IS_STATUS[top.u]))
 		{
 			IS_STATUS[top.v] = true;
 		}
-		else if (top.vs == VS::VS_FOLDED)
+		else if ((top.vs == VS::VS_EXCLUDED) || (top.vs == VS::VS_NOTIF && IS_STATUS[top.u]) || (top.vs == VS::VS_NOTIFNOT && !IS_STATUS[top.u]))
 		{
-			if (IS_STATUS[top.u])
-			{
-				IS_STATUS[top.v] = false;
-				for (auto u : top.neighbors)
-				{
-					IS_STATUS[u] = true;
-				}
-			}
-			else
-			{
-				IS_STATUS[top.v] = true;
-			}
-		}
-		else if (top.vs == VS::VS_TRANSFERED)
-		{
-			bool is_neighbor_selected = false;
-			for (auto u : top.neighbors)
-			{
-				if (IS_STATUS[u])
-				{
-					is_neighbor_selected = true;
-				}
-			}
-			if (is_neighbor_selected)
-			{
-				IS_STATUS[top.v] = false;
-			}
-			else
-			{
-				IS_STATUS[top.v] = true;
-			}
-		}
-		else if (top.vs == VS::VS_MODULE)
-		{
-			for (auto u : top.neighbors)
-			{
-				IS_STATUS[u] = IS_STATUS[top.v];
-			}
+			IS_STATUS[top.v] = false;
 		}
 	}
 	best_solution = local_solution;
@@ -1994,7 +1941,7 @@ void GRAPH::local_search(weight_node local_weight) // Here we take 3 greedy stra
 	vector<vertex> vertices;
 	get_available_vertices(vertices);
 #ifdef DEBUG
-	stack<vertex_status> temp_solution = local_solution;
+	auto temp_solution = local_solution;
 #endif
 
 	sort(vertices.begin(), vertices.end(), [&](const vertex lhs, const vertex rhs) {
@@ -2021,7 +1968,7 @@ void GRAPH::local_search(weight_node local_weight) // Here we take 3 greedy stra
 		ls_weight += weights[v];
 		is_included2ls.add(v);
 #ifdef DEBUG
-		temp_solution.push(vertex_status(v, VS::VS_INCLUDED));
+		temp_solution.push(vertex_status(v, VS::VS_INCLUDED, 0));
 #endif
 	}
 
@@ -2063,7 +2010,7 @@ void GRAPH::local_search(weight_node local_weight) // Here we take 3 greedy stra
 		ls_weight += weights[v];
 		is_included2ls.add(v);
 #ifdef DEBUG
-		temp_solution.push(vertex_status(v, VS::VS_INCLUDED));
+		temp_solution.push(vertex_status(v, VS::VS_INCLUDED, 0));
 #endif
 	}
 
@@ -2105,7 +2052,7 @@ void GRAPH::local_search(weight_node local_weight) // Here we take 3 greedy stra
 		ls_weight += weights[v];
 		is_included2ls.add(v);
 #ifdef DEBUG
-		temp_solution.push(vertex_status(v, VS::VS_INCLUDED));
+		temp_solution.push(vertex_status(v, VS::VS_INCLUDED, 0));
 #endif
 	}
 

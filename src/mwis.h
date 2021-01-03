@@ -59,11 +59,12 @@ private:
 #ifdef DEBUG
 	enum VS
 	{
-		VS_EXCLUDED,
-		VS_INCLUDED,
-		VS_TRANSFERED,
-		VS_FOLDED,
-		VS_MODULE,
+		VS_EXCLUDED, //v=1
+		VS_INCLUDED, //v=0
+		VS_IF,		 //v=1 if u
+		VS_IFNOT,	 //v=1 if !u
+		VS_NOTIF,	 //v=0 if u
+		VS_NOTIFNOT, //v=0 if !u
 		VS_TOKEN
 	};
 
@@ -71,25 +72,11 @@ private:
 	{
 		vertex v, u;
 		int vs;
-		vector<vertex> neighbors;
-
-		vertex_status(vertex v_, int vs_)//EXCLUDED INCLUDED
+		vertex_status(vertex v_, int vs_, vertex u_)
 		{
 			v = v_;
-			vs = vs_;
-		}
-		vertex_status(vertex v_, vector<vertex> &nei, int vs_)//MODULE
-		{
-			v = v_;
-			vs = vs_;
-			neighbors = nei;
-		}
-		vertex_status(vertex v_, vector<vertex> &nei, vertex u_, int vs_)//FOLDED TRANSFORMED
-		{
-			v = v_;
-			vs = vs_;
-			neighbors = nei;
 			u = u_;
+			vs = vs_;
 		}
 	};
 
@@ -151,7 +138,7 @@ private:
 	stack<modified_node> modified_stack;
 	stack<branching_node> branching_stack;
 
-	dynamic_bitset<> is_in_reduction_queue[10];//associate with reduction queue
+	dynamic_bitset<> is_in_reduction_queue[10]; //associate with reduction queue
 	queue<vertex> reduction_queue[10];
 #ifdef DEBUG
 	dynamic_bitset<> IS_STATUS;
@@ -183,8 +170,7 @@ private:
 		&GRAPH::heavy_set_reduction,
 		&GRAPH::unconfined_reduction,
 		&GRAPH::critical_set_reduction,
-		&GRAPH::double_heavy_set_reduction
-	};
+		&GRAPH::double_heavy_set_reduction};
 	bool is_closed(vertex u, vertex v);
 	void modify_weight(vertex v, weight_node obj_weight);
 	weight_node include_vertex(vertex v);
