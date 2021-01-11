@@ -1,4 +1,5 @@
-#pragma once
+#ifndef MWIS_H
+#define MWIS_H
 #include "definitions.h"
 #include "fast_set.h"
 #include "maxflow.h"
@@ -7,6 +8,71 @@
 struct list_node
 {
 	size_t L, R, U, D, label;
+};
+
+struct opt_arg
+{
+	string read_file;	// -r
+	string output_file; // -o
+	bool output_flag;
+	float time_limit; // -t
+	bool op;		  // -w
+	bool help;		  // -h
+
+	string opt_string;
+
+	opt_arg()
+	{
+		time_limit = 1000.0;
+		output_flag = false;
+		op = true;
+		help = false;
+		opt_string = "ho:t:r:w";
+	}
+
+	void get_arg(int argc, char *argv[])
+	{
+		char opt;
+
+		while ((opt = getopt(argc, argv, opt_string.c_str())) != -1)
+		{
+			switch (opt)
+			{
+			case 'h':
+				help = true;
+				cout << "-r the path of the input file" << endl;
+				cout << "-o output_file, optional" << endl;
+				cout << "-t the limit of running time, optional" << endl;
+				cout << "-w run the whole algorithm" << endl;
+				cout << "-h Helps" << endl;
+				break;
+			case 'r':
+				read_file = string(optarg);
+				break;
+
+			case 'o':
+				output_flag = true;
+				output_file = string(optarg);
+				break;
+			case 'w':
+				op = false;
+				break;
+			case 't':
+				time_limit = atof(optarg);
+				break;
+			}
+		}
+
+		// cout << read_file << endl;
+		// cout << time_limit << endl;
+
+		// if (op)
+		// 	cout << "reduce" << endl;
+		// else
+		// 	cout << "whole" << endl;
+		// if (output_flag)
+		// 	cout << output_file << endl;
+	}
 };
 
 class GRAPH
@@ -119,7 +185,6 @@ private:
 	void remove_lr(vertex &removed_vertex);
 	void remove_ud(vertex &removed_vertex);
 	void remove(vertex removed_vertex);
-	void destroy_vertex(vertex vertex_idx);
 	void recover_lr(vertex &removed_vertex);
 	void recover_ud(vertex &removed_vertex);
 	void recover(vertex removed_vertex);
@@ -206,6 +271,8 @@ public:
 #endif
 };
 
-void read_graph(char *filepath, size_t &n, size_t &m);
+void read_graph(size_t &n, size_t &m);
 void init_buffers(size_t n, size_t m);
 void delete_buffers();
+
+#endif

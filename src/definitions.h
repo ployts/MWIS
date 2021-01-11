@@ -1,5 +1,7 @@
 #ifndef DEFINITIONS_H
 #define DEFINITIONS_H
+//This file includes some necessary libraries and macros.
+
 #include <bits/stdc++.h>
 #include <boost/format.hpp>
 #include <boost/dynamic_bitset.hpp>

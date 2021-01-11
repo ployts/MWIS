@@ -5,7 +5,3 @@ This project is an implement of the paper published.
 ## Graph Format
 
 ## User Interface
-
-## Algorithm Details
-
-## References

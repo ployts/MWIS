@@ -1,28 +1,35 @@
 #include "mwis.h"
+#include <unistd.h>
+#include <getopt.h>
 
+//Global arguments to be used.
+
+opt_arg OA;
+
+//Statistics
 float all_reduction_cost = 0;
-float TIME_LIMIT = 0;
 unsigned long long reductions_cnt[10] = {0};
 float reductions_tims_cnt[10] = {0};
 weight_node reductions_weight_cnt[10] = {0};
 unsigned long long first_reductions_cnt[10] = {0};
 float first_reductions_tims_cnt[10] = {0};
 weight_node first_reductions_weight_cnt[10] = {0};
-SMALL_GRAPH small_graph;
-SET set_buffer0; //sets to be used temporarily
-SET set_buffer1; //sets to be used temporarily
-SET set_buffer2; //sets to be used temporarily
-SET set_buffer3; //sets to be used temporarily
-SET set_buffer4; //sets to be used temporarily
+
+SMALL_GRAPH small_graph; // MWIS solver for small graph, brute-force
+SET set_buffer0;		 //sets to be used temporarily
+SET set_buffer1;		 //sets to be used temporarily
+SET set_buffer2;		 //sets to be used temporarily
+SET set_buffer3;		 //sets to be used temporarily
+SET set_buffer4;		 //sets to be used temporarily
 pair<size_t, size_t> *init_edges;
 weight_node *init_weights;
-weight_node *cap_weight;
+weight_node *cap_weight; // buffers for speeding up unconfined reduction.
 std::chrono::_V2::system_clock::time_point start_time;
 size_t *REMAP;
-ISAP *flow_graph;
+ISAP *flow_graph; // MAXFLOW solver for critical independent set.
 list_node *LARGE_BUFFER;
 weight_node *WEIGHT_BUFFER;
-weight_node *NEIGHBORS_WEIGHT_BUFFER;
+weight_node *NEIGHBORS_WEIGHT_BUFFER; //
 size_t *DEGREE_BUFFER;
 GRAPH *GRAPH_BUFFER;
 
@@ -194,10 +201,6 @@ void GRAPH::remove(vertex removed_vertex)
 		remove_ud(now);
 		now = LBR(now);
 	}
-}
-void GRAPH::destroy_vertex(vertex vertex_idx)
-{
-	remove(vertex_idx);
 }
 inline void GRAPH::recover_lr(vertex &removed_vertex)
 {
@@ -661,7 +664,7 @@ void GRAPH::recover_reductions()
 		}
 		else if (top_mod.status == MS::ADDED)
 		{
-			destroy_vertex(top_mod.idx);
+			remove(top_mod.idx);
 			cnt_n = top_mod.idx;
 			list_buffer_cnt = top_mod.lbcnt;
 			continue;
@@ -2132,7 +2135,7 @@ void GRAPH::local_search(weight_node local_weight) // Here we take 3 greedy stra
 bool GRAPH::is_running_time_out()
 {
 	std::chrono::duration<float> cost_time = std::chrono::system_clock::now() - start_time;
-	if (cost_time.count() >= TIME_LIMIT)
+	if (cost_time.count() >= OA.time_limit)
 	{
 		return true;
 	}
@@ -2251,9 +2254,9 @@ weight_node GRAPH::local_max_weight(vector<vertex> &vertices, weight_node lower_
 	return small_graph.max_is();
 }
 
-void read_graph(char *filepath, size_t &n, size_t &m)
+void read_graph(size_t &n, size_t &m)
 {
-	ifstream in(filepath);
+	ifstream in(OA.read_file);
 	size_t flag;
 	string line;
 	in >> n >> m >> flag;
@@ -2318,16 +2321,14 @@ void delete_buffers()
 
 int main(int argc, char *argv[])
 {
+	OA.get_arg(argc, argv);
+
+	if (OA.help)
+		return 0;
+
 	size_t n, m;
-	read_graph(argv[1], n, m);
+	read_graph(n, m);
 	init_buffers(n, m);
-	TIME_LIMIT = atof(argv[2]);
-	
-	bool flag = false;
-	if (argv[3][0] == 'r')
-	{
-		flag = true;
-	}
 
 	auto ALG = GRAPH_BUFFER;
 	ALG->reset(LARGE_BUFFER, WEIGHT_BUFFER, NEIGHBORS_WEIGHT_BUFFER, DEGREE_BUFFER);
@@ -2335,7 +2336,7 @@ int main(int argc, char *argv[])
 	ALG->is_fisrt_runed = true;
 
 	start_time = std::chrono::system_clock::now();
-	if (flag)
+	if (OA.op)
 		ALG->reduce();
 	else
 		ALG->run_branch(0);
@@ -2344,7 +2345,7 @@ int main(int argc, char *argv[])
 	std::chrono::duration<float> branch_reduce_time = end_exact - start_time;
 	cout << branch_reduce_time.count() << " " << GRAPH_BUFFER->MAX_IS() << endl;
 
-	if (flag)
+	if (OA.op)
 	{
 
 		for (int i = 0; i < 7; i++)
@@ -2357,7 +2358,8 @@ int main(int argc, char *argv[])
 			cout << reductions_cnt[i] << " " << reductions_tims_cnt[i] << " " << reductions_weight_cnt[i] << endl;
 		}
 
-		ALG->output_reduced_graph(argv[4]);
+		if (OA.output_flag)
+			ALG->output_reduced_graph(OA.output_file);
 	}
 	else
 	{
@@ -2392,6 +2394,10 @@ int main(int argc, char *argv[])
 		}
 
 		cout << is_weight << endl;
+
+		if (OA.output_flag)
+		{
+		}
 #endif
 	}
 
