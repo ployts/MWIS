@@ -1578,7 +1578,7 @@ weight_node GRAPH::critical_set_reduction()
 	cst_flag.clear();
 	for (size_t i = 0; i < num; i++)
 	{
-		if (flow_graph->flow[i * 2] > 0)
+		if (flow_graph->ask_flow(i * 2) > 0)
 		{
 			cst.push_back(vertices[i]);
 			cst_flag.add(vertices[i]);

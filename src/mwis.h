@@ -1,9 +1,7 @@
-#ifndef MWIS_H
-#define MWIS_H
-#include "definitions.h"
-#include "fast_set.h"
-#include "maxflow.h"
-#include "bit_graph.h"
+#ifndef _MWIS_H_
+#define _MWIS_H_
+
+#include "others.h"
 
 struct list_node
 {
