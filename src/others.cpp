@@ -143,11 +143,24 @@ bool SET::get(size_t ele)
 {
     return buffer[ele] >= valid_flag;
 }
+
+bool SET::operator[](const size_t idx)
+{
+    return buffer[idx] >= valid_flag;
+}
 void SET::add(size_t ele)
 {
     if (!get(ele))
     {
         buffer[ele] = valid_flag;
+        valid_size++;
+    }
+}
+void SET::operator+(const size_t idx)
+{
+    if (!get(idx))
+    {
+        buffer[idx] = valid_flag;
         valid_size++;
     }
 }
@@ -157,6 +170,14 @@ void SET::remove(size_t ele)
     {
         valid_size--;
         buffer[ele] = 0;
+    }
+}
+void SET::operator-(const size_t idx)
+{
+    if (get(idx))
+    {
+        valid_size--;
+        buffer[idx] = 0;
     }
 }
 size_t SET::size()
@@ -286,4 +307,47 @@ int ISAP::Max_flow()
 int ISAP::ask_flow(size_t idx)
 {
     return flow[idx];
+}
+
+opt_arg::opt_arg()
+{
+    time_limit = 1000.0;
+    output_flag = false;
+    op = true;
+    help = false;
+    opt_string = "ho:t:r:w";
+}
+
+void opt_arg::get_arg(int argc, char *argv[])
+{
+    char opt;
+
+    while ((opt = getopt(argc, argv, opt_string.c_str())) != -1)
+    {
+        switch (opt)
+        {
+        case 'h':
+            help = true;
+            cout << "-r the path of the input file" << endl;
+            cout << "-o output_file, optional" << endl;
+            cout << "-t the limit of running time, optional" << endl;
+            cout << "-w run the whole algorithm" << endl;
+            cout << "-h Helps" << endl;
+            break;
+        case 'r':
+            read_file = string(optarg);
+            break;
+
+        case 'o':
+            output_flag = true;
+            output_file = string(optarg);
+            break;
+        case 'w':
+            op = false;
+            break;
+        case 't':
+            time_limit = atof(optarg);
+            break;
+        }
+    }
 }

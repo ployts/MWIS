@@ -716,7 +716,7 @@ weight_node GRAPH::computing_upper_bound(vector<vertex> &vertex_order, weight_no
 
 		For(i, v)
 		{
-			if (is_colored.get(LBLB(i)))
+			if (is_colored[LBLB(i)])
 				neighbors_cnt[REMAP[LBLB(i)]]++;
 		}
 		is_alone = true;
@@ -1468,13 +1468,13 @@ weight_node GRAPH::twin_reduction()
 			For(i, min_neighbor)
 			{
 				auto u = LBLB(i);
-				if (!is_checked_twin.get(u) && degree[u] == degree[v])
+				if (!is_checked_twin[u] && degree[u] == degree[v])
 				{
 					bool is_twin = true;
 
 					For(l, u)
 					{
-						if (!neighbors.get(LBLB(l)))
+						if (!neighbors[LBLB(l)])
 						{
 							is_twin = false;
 							break;
@@ -2245,7 +2245,7 @@ weight_node GRAPH::local_max_weight(vector<vertex> &vertices, weight_node lower_
 		small_graph.assign_weight(REMAP[u], weights[u]);
 		For(i, u)
 		{
-			if (is_mapped.get(LBLB(i)))
+			if (is_mapped[LBLB(i)])
 			{
 				small_graph.add_edge(REMAP[u], REMAP[LBLB(i)]);
 			}

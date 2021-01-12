@@ -73,8 +73,11 @@ public:
 	SET();
 	void clear();
 	bool get(size_t ele);
+	bool operator[](const size_t idx);
 	void add(size_t ele);
+	void operator+(const size_t idx);
 	void remove(size_t ele);
+	void operator-(const size_t idx);
 	size_t size();
 };
 
@@ -97,4 +100,22 @@ public:
 	int Max_flow();
 	int ask_flow(size_t idx);
 };
+
+class opt_arg
+{
+public:
+	string read_file;	// -r
+	string output_file; // -o
+	bool output_flag;
+	float time_limit; // -t
+	bool op;		  // -w
+	bool help;		  // -h
+
+	string opt_string;
+
+	opt_arg();
+
+	void get_arg(int argc, char *argv[]);
+};
+
 #endif
