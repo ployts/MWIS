@@ -22,7 +22,8 @@
         "regex": "cpp",
         "tuple": "cpp",
         "valarray": "cpp",
-        "iostream": "cpp"
+        "iostream": "cpp",
+        "chrono": "cpp"
     },
     "C_Cpp.dimInactiveRegions": true
 }

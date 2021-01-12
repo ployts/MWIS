@@ -72,12 +72,9 @@ public:
 	SET(size_t sz);
 	SET();
 	void clear();
-	bool get(size_t ele);
-	bool operator[](const size_t idx);
-	void add(size_t ele);
-	void operator+(const size_t idx);
-	void remove(size_t ele);
-	void operator-(const size_t idx);
+	const bool operator[](const size_t &ele) const;
+	void operator+(const size_t &ele);
+	void operator-(const size_t &ele);
 	size_t size();
 };
 

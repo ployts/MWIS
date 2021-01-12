@@ -139,45 +139,24 @@ void SET::clear()
         memset(buffer, 0, sizeof(size_t) * buffer_size);
     }
 }
-bool SET::get(size_t ele)
+const bool SET::operator[](const size_t &ele) const
 {
     return buffer[ele] >= valid_flag;
 }
-
-bool SET::operator[](const size_t idx)
+void SET::operator+(const size_t &ele)
 {
-    return buffer[idx] >= valid_flag;
-}
-void SET::add(size_t ele)
-{
-    if (!get(ele))
+    if (buffer[ele] < valid_flag)
     {
         buffer[ele] = valid_flag;
         valid_size++;
     }
 }
-void SET::operator+(const size_t idx)
+void SET::operator-(const size_t &ele)
 {
-    if (!get(idx))
-    {
-        buffer[idx] = valid_flag;
-        valid_size++;
-    }
-}
-void SET::remove(size_t ele)
-{
-    if (get(ele))
+    if (buffer[ele] >= valid_flag)
     {
         valid_size--;
         buffer[ele] = 0;
-    }
-}
-void SET::operator-(const size_t idx)
-{
-    if (get(idx))
-    {
-        valid_size--;
-        buffer[idx] = 0;
     }
 }
 size_t SET::size()

@@ -204,8 +204,40 @@ public:
 #endif
 };
 
-void read_graph(size_t &n, size_t &m);
-void init_buffers(size_t n, size_t m);
-void delete_buffers();
+class GLOBAL_ARGS
+{
+private:
+	bool is_inited = false;
 
+public:
+	float all_reduction_cost = 0;
+	unsigned long long reductions_cnt[10] = {0};
+	float reductions_tims_cnt[10] = {0};
+	weight_node reductions_weight_cnt[10] = {0};
+	unsigned long long first_reductions_cnt[10] = {0};
+	float first_reductions_tims_cnt[10] = {0};
+	weight_node first_reductions_weight_cnt[10] = {0};
+
+	size_t N;
+	size_t M;
+	std::chrono::_V2::system_clock::time_point START_TIME;
+	SMALL_GRAPH SG;		// MWIS solver for small graph, brute-force
+	SET SET_BUFFERS[5]; //sets to be used temporarily
+	pair<size_t, size_t> *EDGES;
+	weight_node *WEIGHT;
+	weight_node *CAP_WEIGHT; // buffers for speeding up unconfined reduction.
+	size_t *REMAP;
+	ISAP *FLOW_GRAPH; // MAXFLOW solver for critical independent set.
+	list_node *LARGE_BUFFER;
+	weight_node *WEIGHT_BUFFER;
+	weight_node *NEIGHBORS_WEIGHT_BUFFER;
+	size_t *DEGREE_BUFFER;
+	GRAPH *GRAPH_BUFFER;
+
+	void read(string filepath);
+
+	~GLOBAL_ARGS();
+};
+
+void gogogogo(int argc, char *argv[]);
 #endif
