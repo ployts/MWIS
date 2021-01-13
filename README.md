@@ -1,15 +1,3 @@
-<head>
-    <script src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML" type="text/javascript"></script>
-    <script type="text/x-mathjax-config">
-        MathJax.Hub.Config({
-            tex2jax: {
-            skipTags: ['script', 'noscript', 'style', 'textarea', 'pre'],
-            inlineMath: [['$','$']]
-            }
-        });
-    </script>
-</head>
-
 # Efficient Reductions and A Fast Algorithm of Maximum Weighted Independent Set
 
 This project is an implement of the paper published.
@@ -18,7 +6,7 @@ This project is an implement of the paper published.
 
 ### Input File
 
-A graph $G=(V,E)$
+A graph ![](http://latex.codecogs.com/svg.latex? G=(V,E)) with ![](http://latex.codecogs.com/svg.latex? n)
 
 ## User Interface
 
