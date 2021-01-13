@@ -6,7 +6,7 @@ This project is an implement of the paper published.
 
 ### Input File
 
-A graph ![](http://latex.codecogs.com/svg.latex? G=(V,E)) with ![](http://latex.codecogs.com/svg.latex? n)
+A graph ![1](http://latex.codecogs.com/svg.latex?G=(V,E)) with ![2](http://latex.codecogs.com/svg.latex?n)
 
 ## User Interface
 
