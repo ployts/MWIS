@@ -2237,7 +2237,7 @@ void GLOBAL_ARGS::read(string filepath)
 	ifstream in(filepath);
 	size_t flag;
 	string line;
-	in >> N >> M >> flag;
+	in >> N >> M;
 
 	EDGES = new pair<size_t, size_t>[2 * M];
 	WEIGHT = new weight_node[2 * N];
